@@ -37,7 +37,34 @@ static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 		LocalFree (reinterpret_cast<LPVOID> (errmsg));
 }
 
+class winsock_wrapper {
+	int _error;
+	WSADATA wsadata;
+
+public:
+	winsock_wrapper () {
+		_error = WSAStartup (MAKEWORD (2, 2), &wsadata);
+	}
+
+	winsock_wrapper& operator= (const winsock_wrapper&) = delete;
+	winsock_wrapper (const winsock_wrapper&) = delete;
+
+	~winsock_wrapper () {
+		WSACleanup ();
+	}
+
+	int error () const {
+		return this->_error;
+	}
+};
+
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int nCmdShow) {
+	winsock_wrapper winsock;
+	if (winsock.error ()) {
+		explain (L"WSAStartup failed", winsock.error ());
+		return 1;
+	}
+
 	WNDCLASSEX wcex = WNDCLASSEX ();
 	wcex.cbSize = sizeof wcex;
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
