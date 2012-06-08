@@ -1,23 +1,16 @@
+#include <memory>
 #include <sstream>
 
 #define STRICT
 #include <windows.h>
 
+#include <commctrl.h>
+
+static const int control_margin = 10;
+
 static const wchar_t main_window_class[] = L"qarma.main";
 static const wchar_t main_window_title[] = L"Arma 2 player hunter";
-
-LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	switch (uMsg) {
-	case WM_DESTROY:
-		PostQuitMessage (0);
-		break;
-	default:
-		return DefWindowProc(hWnd, uMsg, wParam, lParam);
-		break;
-	}
-
-	return 0;
-}
+static const int idc_main_master_load = 0;
 
 static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 	std::wostringstream ss;
@@ -35,6 +28,51 @@ static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 
 	if (errmsg)
 		LocalFree (reinterpret_cast<LPVOID> (errmsg));
+}
+
+struct window_data {
+	NONCLIENTMETRICS metrics;
+	std::shared_ptr<HFONT__> message_font;
+};
+
+LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	window_data* wd;
+	if (uMsg != WM_CREATE) {
+		wd = reinterpret_cast<window_data*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
+	}
+
+	// used by WM_CREATE
+	HWND b;
+
+	switch (uMsg) {
+	case WM_CREATE:
+		wd = reinterpret_cast<window_data*> (reinterpret_cast<CREATESTRUCT*> (lParam)->lpCreateParams);
+		SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR> (wd));
+
+		b = CreateWindow (WC_BUTTON, L"Get more servers",
+			WS_CHILD | WS_VISIBLE,
+			control_margin, control_margin, 200, 24,
+			hWnd, reinterpret_cast<HMENU> (idc_main_master_load),
+			0, 0);
+		if (b) {
+			SendMessage (b, WM_SETFONT, reinterpret_cast<WPARAM> (wd->message_font.get ()), true);
+		} else {
+			explain (L"CreateWindow failed");
+		}
+
+		//DeleteObject (font);
+
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage (0);
+		break;
+	default:
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+		break;
+	}
+
+	return 0;
 }
 
 class winsock_wrapper {
@@ -79,10 +117,19 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		return 1;
 	}
 
+	window_data wd;
+	wd.metrics = NONCLIENTMETRICS ();
+	wd.metrics.cbSize = sizeof wd.metrics;
+	if (!SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof wd.metrics, &wd.metrics, 0)) {
+		explain (L"SystemParametersInfo failed");
+		return 1;
+	}
+	wd.message_font.reset (CreateFontIndirect (&wd.metrics.lfMessageFont), DeleteObject);
+
 	HWND hWnd = CreateWindow (main_window_class, main_window_title,
 		WS_OVERLAPPEDWINDOW /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX */,
 		CW_USEDEFAULT, CW_USEDEFAULT, 1024, 720,
-		0, 0, hInstance, 0);
+		0, 0, hInstance, &wd);
 	if (!hWnd) {
 		explain (L"CreateWindow failed");
 		return 1;
