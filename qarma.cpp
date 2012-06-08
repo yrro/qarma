@@ -32,7 +32,9 @@ static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 
 struct window_data {
 	NONCLIENTMETRICS metrics;
-	std::shared_ptr<HFONT__> message_font;
+	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
+
+	window_data (): message_font (0, DeleteObject) {}
 };
 
 LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -59,8 +61,6 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		} else {
 			explain (L"CreateWindow failed");
 		}
-
-		//DeleteObject (font);
 
 		break;
 
@@ -124,7 +124,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		explain (L"SystemParametersInfo failed");
 		return 1;
 	}
-	wd.message_font.reset (CreateFontIndirect (&wd.metrics.lfMessageFont), DeleteObject);
+	wd.message_font.reset (CreateFontIndirect (&wd.metrics.lfMessageFont));
 
 	HWND hWnd = CreateWindow (main_window_class, main_window_title,
 		WS_OVERLAPPEDWINDOW /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX */,
