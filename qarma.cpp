@@ -67,6 +67,17 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_DESTROY:
 		PostQuitMessage (0);
 		break;
+
+	case WM_COMMAND:
+		switch (HIWORD (wParam)) {
+		case BN_CLICKED:
+			switch (LOWORD (wParam)) {
+			case idc_main_master_load:
+				MessageBox (reinterpret_cast<HWND> (lParam), L"hi", L"hi", 0);
+			}
+			break;
+		}
+
 	default:
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		break;
