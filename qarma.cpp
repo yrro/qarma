@@ -30,9 +30,52 @@ static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 		LocalFree (reinterpret_cast<LPVOID> (errmsg));
 }
 
+class SOCKET_wrapper {
+	SOCKET s;
+	int _error;
+public:
+	SOCKET_wrapper (): s (INVALID_SOCKET), _error (0) {}
+
+	SOCKET_wrapper (int af, int type, int protocol): s (socket (af, type, protocol)), _error (s == INVALID_SOCKET ? WSAGetLastError () : 0) {}
+
+	SOCKET_wrapper& operator= (SOCKET_wrapper&& other) {
+		if (this != &other) {
+			if (s != INVALID_SOCKET)
+				closesocket (s);
+
+			s = other.s;
+			_error = other._error;
+
+			other.s = INVALID_SOCKET;
+			other._error = 0;
+		}
+	}
+
+	SOCKET_wrapper (SOCKET_wrapper&& other): s (INVALID_SOCKET) {
+		*this = std::move (other);
+	}
+
+	SOCKET_wrapper& operator= (const SOCKET_wrapper&) = delete;
+	SOCKET_wrapper (const SOCKET_wrapper&) = delete;
+
+	~SOCKET_wrapper () {
+		if (s != INVALID_SOCKET)
+			closesocket (s);
+	}
+
+	operator SOCKET () const {
+		return s;
+	}
+
+	int error () const {
+		return _error;
+	}
+};
+
 struct window_data {
 	NONCLIENTMETRICS metrics;
 	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
+	SOCKET_wrapper master_socket;
 
 	window_data (): message_font (0, DeleteObject) {}
 };
@@ -73,7 +116,10 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		case BN_CLICKED:
 			switch (LOWORD (wParam)) {
 			case idc_main_master_load:
-				MessageBox (reinterpret_cast<HWND> (lParam), L"hi", L"hi", 0);
+				wd->master_socket = SOCKET_wrapper (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+				if (wd->master_socket == INVALID_SOCKET) {
+					explain (L"socket failed", wd->master_socket.error ());
+				}
 			}
 			break;
 		}
