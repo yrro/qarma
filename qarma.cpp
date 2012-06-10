@@ -1,16 +1,21 @@
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #define STRICT
+#include <winsock2.h>
 #include <windows.h>
 
 #include <commctrl.h>
+#include <ws2tcpip.h>
 
 static const int control_margin = 10;
 
 static const wchar_t main_window_class[] = L"qarma.main";
 static const wchar_t main_window_title[] = L"Arma 2 player hunter";
 static const int idc_main_master_load = 0;
+
+static const int WM_MASTERSOCKET = WM_USER;
 
 static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 	std::wostringstream ss;
@@ -119,10 +124,50 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 				wd->master_socket = SOCKET_wrapper (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 				if (wd->master_socket == INVALID_SOCKET) {
 					explain (L"socket failed", wd->master_socket.error ());
+					break;
+				}
+				if (WSAAsyncSelect (wd->master_socket, hWnd, WM_MASTERSOCKET, FD_READ|FD_WRITE|FD_CONNECT|FD_CLOSE) == SOCKET_ERROR) {
+					explain (L"WSAAsyncSelect failed", WSAGetLastError ());
+					break;
+				}
+				std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> result (0, freeaddrinfo);
+				{
+					addrinfo hints = addrinfo ();
+					hints.ai_family = AF_INET;
+					hints.ai_socktype = SOCK_DGRAM;
+					hints.ai_protocol = IPPROTO_UDP;
+					addrinfo* tmp;
+					int r = getaddrinfo ("arma2oapc.ms1.gamespy.com", "28910", &hints, &tmp);
+					if (r) {
+						explain (L"getaddrinfo failure", WSAGetLastError ());
+						break;
+					}
+					result.reset (tmp);
+				}
+				std::vector<int> errors;
+				for (addrinfo* a = result.get (); a; a = a->ai_next) {
+					int r = connect (wd->master_socket, a->ai_addr, a->ai_addrlen);
+					if (r == 0 || (r == SOCKET_ERROR && WSAGetLastError () == WSAEWOULDBLOCK)) {
+						errors.clear ();
+						break;
+					} else {
+						errors.push_back (WSAGetLastError ());
+					}
+				}
+				if (! errors.empty ()) {
+					std::wostringstream ss (L"Connection errors occurred:\n\n");
+					for (int& e: errors) {
+						ss << e << '\n';
+					}
+					MessageBox (hWnd, ss.str ().c_str (), L"connect failed", 0);
 				}
 			}
 			break;
 		}
+
+	case WM_MASTERSOCKET:
+		MessageBox (hWnd, L"wow", L"", 0);
+		break;
 
 	default:
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
