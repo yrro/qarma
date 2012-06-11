@@ -199,6 +199,11 @@ public:
 };
 
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int nCmdShow) {
+	INITCOMMONCONTROLSEX icc = INITCOMMONCONTROLSEX ();
+	icc.dwSize = sizeof icc;
+	icc.dwICC = ICC_STANDARD_CLASSES;
+	InitCommonControlsEx (&icc);
+
 	winsock_wrapper winsock;
 	if (winsock.error ()) {
 		explain (L"WSAStartup failed", winsock.error ());
