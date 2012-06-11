@@ -37,23 +37,13 @@ static void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 
 class SOCKET_wrapper {
 	SOCKET s;
-	int _error;
 public:
-	SOCKET_wrapper (): s (INVALID_SOCKET), _error (0) {}
+	SOCKET_wrapper (): s (INVALID_SOCKET) {}
 
-	SOCKET_wrapper (int af, int type, int protocol): s (socket (af, type, protocol)), _error (s == INVALID_SOCKET ? WSAGetLastError () : 0) {}
+	SOCKET_wrapper (int af, int type, int protocol): s (socket (af, type, protocol)) {}
 
 	SOCKET_wrapper& operator= (SOCKET_wrapper&& other) {
-		if (this != &other) {
-			if (s != INVALID_SOCKET)
-				closesocket (s);
-
-			s = other.s;
-			_error = other._error;
-
-			other.s = INVALID_SOCKET;
-			other._error = 0;
-		}
+		std::swap (this->s, other.s);
 		return *this;
 	}
 
@@ -71,10 +61,6 @@ public:
 
 	operator SOCKET () const {
 		return s;
-	}
-
-	int error () const {
-		return _error;
 	}
 };
 
@@ -124,7 +110,7 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			case idc_main_master_load:
 				wd->master_socket = SOCKET_wrapper (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 				if (wd->master_socket == INVALID_SOCKET) {
-					explain (L"socket failed", wd->master_socket.error ());
+					explain (L"socket failed", WSAGetLastError ());
 					break;
 				}
 				if (WSAAsyncSelect (wd->master_socket, hWnd, WM_MASTERSOCKET, FD_READ|FD_WRITE|FD_CONNECT|FD_CLOSE) == SOCKET_ERROR) {
