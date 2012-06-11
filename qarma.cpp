@@ -54,6 +54,7 @@ public:
 			other.s = INVALID_SOCKET;
 			other._error = 0;
 		}
+		return *this;
 	}
 
 	SOCKET_wrapper (SOCKET_wrapper&& other): s (INVALID_SOCKET) {
