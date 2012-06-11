@@ -1,10 +1,9 @@
-AM_CXXFLAGS := -Wall -Wextra
+AM_CXXFLAGS := -Wall -Wextra -std=c++0x -municode
+AM_LDFLAGS := -Wl,--subsystem=windows
 
 noinst_PROGRAMS := qarma
 
-qarma_CXXFLAGS := -municode -std=c++0x
 qarma_LDADD := -lws2_32 -lgdi32 -lcomctl32
-qarma_LDFLAGS := -Wl,--subsystem=windows
 qarma_SOURCES := qarma.cpp qarma-rc.rc
 
 qarma-rc.o: qarma.manifest
