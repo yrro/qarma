@@ -5,6 +5,7 @@
 #define STRICT
 #include <winsock2.h>
 #include <windows.h>
+#include <windowsx.h>
 
 #include <commctrl.h>
 #include <ws2tcpip.h>
@@ -92,7 +93,7 @@ LRESULT CALLBACK wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			hWnd, reinterpret_cast<HMENU> (idc_main_master_load),
 			0, 0);
 		if (b) {
-			SendMessage (b, WM_SETFONT, reinterpret_cast<WPARAM> (wd->message_font.get ()), true);
+			SetWindowFont (b, wd->message_font.get (), true);
 		} else {
 			explain (L"CreateWindow failed");
 		}
