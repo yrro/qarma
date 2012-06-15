@@ -265,7 +265,6 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 			return 0;
 
 		case FD_WRITE:
-			//MessageBox (hWnd, L"xmit", main_window_title, 0);
 			wd->enctypex_data.start = 0;
 			enctypex_decoder_rand_validate (&wd->master_validate[0]);
 			std::ostringstream packet;
@@ -314,13 +313,13 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 					wd->master_socket = SOCKET_wrapper ();
 					return 0;
 				} else if (r == 0) {
+					abort (); // should not reach because we should receive FD_CLOSE instead
 					wd->master_stage = error;
 					wd->master_socket = SOCKET_wrapper ();
 
 					std::wostringstream ss;
 					ss << L"premature end-of-data. recieved " << wd->master_data.size () << " bytes in total";
 					MessageBox (hWnd, ss.str ().c_str (), main_window_title, 0);
-					abort (); // should not reach because we should receive FD_CLOSE instead
 					return 0;
 				}
 				std::copy (buf.begin (), buf.begin () + r, std::back_inserter (wd->master_data));
