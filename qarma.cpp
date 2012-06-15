@@ -7,6 +7,12 @@
 #include <sstream>
 #include <vector>
 
+#ifndef UNICODE
+#error Must build in Unicode mode
+#else
+#define _UNICODE
+#endif
+
 #define STRICT
 #include <winsock2.h>
 #include <windows.h>
@@ -257,21 +263,21 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 			enctypex_decoder_rand_validate (&wd->master_validate[0]);
 			std::ostringstream packet;
 			packet << '\0'
-				   << '\1'
-				   << '\3'
-				   << '\0' // 32-bit
-				   << '\0'
-				   << '\0'
-				   << '\0'
-				   << "arma2oapc" << '\0'
-				   << "gslive" << '\0';
+			       << '\1'
+			       << '\3'
+			       << '\0' // 32-bit
+			       << '\0'
+			       << '\0'
+			       << '\0'
+			       << "arma2oapc" << '\0'
+			       << "gslive" << '\0';
 			std::copy (wd->master_validate.begin (), wd->master_validate.end () - 1, std::ostreambuf_iterator<char> (packet)); // note: don't copy the final '\0' byte of master_validate
 			packet << "" << '\0' // filter (note, not preceeded by a '\0' separator either
-				   << REQUEST << '\0'
-				   << '\0'
-				   << '\0'
-				   << '\0'
-				   << '\1'; // 1 = requested information
+			       << REQUEST << '\0'
+			       << '\0'
+			       << '\0'
+			       << '\0'
+			       << '\1'; // 1 = requested information
 			std::vector<char> buf (2 + packet.str ().size ());
 			WSAHtons (wd->master_socket, buf.size (), reinterpret_cast<u_short*> (&buf[0]));
 			const std::string s = packet.str ();
@@ -438,3 +444,5 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 	}
 	return msg.wParam;
 }
+
+// vim: ts=4 sts=4 sw=4 noet
