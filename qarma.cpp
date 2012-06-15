@@ -120,8 +120,8 @@ struct window_data {
 	}
 };
 
-BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
-	window_data* wd = reinterpret_cast<window_data*> (lpcs->lpCreateParams);
+BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
+	window_data* wd = new window_data;
 	SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR> (wd));
 
 	wd->metrics = NONCLIENTMETRICS ();
@@ -144,8 +144,8 @@ BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
 	return TRUE; // later mangled by HANDLE_WM_CREATE macro
 }
 
-LRESULT main_window_on_destroy (HWND /*hWnd*/) {
-	// XXX destruct window_data
+LRESULT main_window_on_destroy (HWND hWnd) {
+	delete reinterpret_cast<window_data*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
 	PostQuitMessage (0);
 	return 0;
 }
@@ -414,11 +414,10 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		return 1;
 	}
 
-	window_data wd;
 	HWND hWnd = CreateWindow (main_window_class, main_window_title,
 		WS_OVERLAPPEDWINDOW /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX */,
 		CW_USEDEFAULT, CW_USEDEFAULT, 1024, 720,
-		0, 0, hInstance, &wd);
+		0, 0, hInstance, nullptr);
 	if (!hWnd) {
 		explain (L"CreateWindow failed");
 		return 1;
