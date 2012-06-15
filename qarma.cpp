@@ -204,13 +204,12 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 			std::vector<int> errors;
 			for (addrinfo* a = lookup.get (); a; a = a->ai_next) {
 				int r = connect (wd->master_socket, a->ai_addr, a->ai_addrlen);
-				if (r == 0 || (r == SOCKET_ERROR && WSAGetLastError () == WSAEWOULDBLOCK)) {
-					// XXX why does connect return 0 when it's in non-blocking mode?
+				assert (r); // non-blocking so should never return 0
+				if (r == SOCKET_ERROR && WSAGetLastError () == WSAEWOULDBLOCK) {
 					errors.clear ();
 					return 0;
-				} else {
-					errors.push_back (WSAGetLastError ());
 				}
+				errors.push_back (WSAGetLastError ());
 			}
 			if (! errors.empty ()) {
 				std::wostringstream ss (L"Connection errors occurred:\n\n");
