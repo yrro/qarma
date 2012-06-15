@@ -30,6 +30,7 @@ static const int control_margin = 10;
 static const wchar_t main_window_class[] = L"qarma.main";
 static const wchar_t main_window_title[] = L"Arma 2 player hunter";
 static const int idc_main_master_load = 0;
+static const int idc_main_progress = 1;
 
 static const UINT WM_WSAASYNC = WM_USER + 0;
 
@@ -145,7 +146,12 @@ BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
 		nullptr, nullptr))
 	{
 		SetWindowFont (b, wd->message_font.get (), true);
+		PostMessage (hWnd, WM_COMMAND, MAKELONG(idc_main_master_load, BN_CLICKED), reinterpret_cast<LPARAM> (b));
 	}
+
+	CreateWindow (PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE,
+		control_margin, control_margin + 100, 200, 20,
+		hWnd, reinterpret_cast<HMENU> (idc_main_progress), nullptr, nullptr);
 
 	return TRUE; // later mangled by HANDLE_WM_CREATE macro
 }
@@ -163,6 +169,8 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 	case idc_main_master_load:
 		switch (codeNotify) {
 		case BN_CLICKED:
+			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
+
 			/* resolve */
 			std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 			{
@@ -339,6 +347,8 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 	case complete:
 		switch (wsa_event) {
 		case FD_CLOSE:
+			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 0, 0);
+
 			wd->master_socket = SOCKET_wrapper ();
 			std::wostringstream ss;
 			ss << L"recieved " << wd->master_data.size () << " bytes in total";
@@ -396,7 +406,7 @@ public:
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int nCmdShow) {
 	INITCOMMONCONTROLSEX icc = INITCOMMONCONTROLSEX ();
 	icc.dwSize = sizeof icc;
-	icc.dwICC = ICC_STANDARD_CLASSES;
+	icc.dwICC = ICC_STANDARD_CLASSES | ICC_PROGRESS_CLASS;
 	InitCommonControlsEx (&icc);
 
 	winsock_wrapper winsock;
