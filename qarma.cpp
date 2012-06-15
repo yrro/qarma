@@ -121,7 +121,7 @@ struct window_data {
 	std::array<unsigned char, 9> master_validate;
 	std::vector<unsigned char> master_data;
 
-	window_data (): message_font (0, DeleteObject), master_stage (error) {
+	window_data (): message_font (nullptr, DeleteObject), master_stage (error) {
 		master_data.reserve (16384);
 	}
 };
@@ -142,7 +142,7 @@ BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
 		WS_CHILD | WS_VISIBLE,
 		control_margin, control_margin, 200, 24,
 		hWnd, reinterpret_cast<HMENU> (idc_main_master_load),
-		0, 0))
+		nullptr, nullptr))
 	{
 		SetWindowFont (b, wd->message_font.get (), true);
 	}
@@ -164,7 +164,7 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 		switch (codeNotify) {
 		case BN_CLICKED:
 			/* resolve */
-			std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (0, freeaddrinfo);
+			std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 			{
 				addrinfo hints = addrinfo ();
 				hints.ai_family = AF_INET;
@@ -412,7 +412,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 	wcex.lpfnWndProc = main_window_wndproc;
 	wcex.hInstance = hInstance;
 	//wcex.hIcon = something;
-	wcex.hCursor = LoadCursor (0, IDC_ARROW);
+	wcex.hCursor = LoadCursor (nullptr, IDC_ARROW);
 	wcex.hbrBackground = reinterpret_cast<HBRUSH> (1+COLOR_WINDOW);
 	wcex.lpszClassName = main_window_class;
 	if (!RegisterClassEx (&wcex)) {
@@ -434,7 +434,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 
 	BOOL r;
 	MSG msg;
-	while ((r = GetMessage (&msg, 0, 0, 0)) > 0) {
+	while ((r = GetMessage (&msg, nullptr, 0, 0)) > 0) {
 		TranslateMessage (&msg);
 		DispatchMessage (&msg);
 	}
