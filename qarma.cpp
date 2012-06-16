@@ -31,6 +31,7 @@ static const wchar_t main_window_class[] = L"qarma.main";
 static const wchar_t main_window_title[] = L"Arma 2 player hunter";
 static const int idc_main_master_load = 0;
 static const int idc_main_progress = 1;
+static const int idc_main_master_count = 2;
 
 static const UINT WM_WSAASYNC = WM_USER + 0;
 
@@ -121,6 +122,7 @@ struct window_data {
 	enctypex_data_t enctypex_data;
 	std::array<unsigned char, 9> master_validate;
 	std::vector<unsigned char> master_data;
+	std::vector<server_endpoint> server_list;
 
 	window_data (): message_font (nullptr, DeleteObject), master_stage (error) {
 		master_data.reserve (16384);
@@ -153,6 +155,13 @@ BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
 		control_margin, control_margin + 100, 200, 20,
 		hWnd, reinterpret_cast<HMENU> (idc_main_progress), nullptr, nullptr);
 
+	if (HWND s = CreateWindow (WC_STATIC, L"test", WS_CHILD | WS_VISIBLE,
+		control_margin, control_margin + 120, 200, 24,
+		hWnd, reinterpret_cast<HMENU> (idc_main_master_count), nullptr, nullptr))
+	{
+		SetWindowFont (s, wd->message_font.get (), true);
+	}
+
 	return TRUE; // later mangled by HANDLE_WM_CREATE macro
 }
 
@@ -170,6 +179,7 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 		switch (codeNotify) {
 		case BN_CLICKED:
 			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
+			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list...");
 
 			/* resolve */
 			std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
@@ -350,8 +360,8 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 
 			wd->master_socket = SOCKET_wrapper ();
 			std::wostringstream ss;
-			ss << L"recieved " << wd->master_data.size () << " bytes in total";
-			MessageBox (hWnd, ss.str ().c_str (), main_window_title, 0);
+			ss << wd->master_data.size () << " bytes recieved";
+			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
 			return 0;
 		break;
 		}
