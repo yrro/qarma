@@ -5,6 +5,7 @@
 #include <iterator>
 #include <memory>
 #include <sstream>
+#include <set>
 #include <vector>
 
 #ifndef UNICODE
@@ -115,6 +116,19 @@ struct server_endpoint {
 	std::uint16_t port;
 } __attribute ((packed));
 
+bool operator< (const in_addr& a, const in_addr& b) {
+	// assumes network (big) endianess!
+	return a.S_un.S_addr < b.S_un.S_addr;
+}
+
+bool operator== (const in_addr& a, const in_addr& b) {
+	return a.S_un.S_addr == b.S_un.S_addr;
+}
+
+bool operator< (const server_endpoint& a, const server_endpoint& b) {
+	return a.ip < b.ip || (a.ip == b.ip && a.port < b.port);
+}
+
 struct window_data {
 	NONCLIENTMETRICS metrics;
 	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
@@ -124,7 +138,7 @@ struct window_data {
 	enctypex_data_t enctypex_data;
 	std::array<unsigned char, 9> master_validate;
 	std::vector<unsigned char> master_data;
-	//std::vector<server_endpoint> server_list;
+	std::set<server_endpoint> server_list;
 
 	window_data (): message_font (nullptr, DeleteObject), master_stage (error) {
 		master_data.reserve (16384);
@@ -181,7 +195,7 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 		switch (codeNotify) {
 		case BN_CLICKED:
 			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
-			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list...");
+			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list (0 KiB)");
 
 			/* resolve */
 			std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
@@ -335,6 +349,10 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 					return 0;
 				}
 				std::copy (buf.begin (), buf.begin () + r, std::back_inserter (wd->master_data));
+
+				std::wostringstream ss;
+				ss << "Getting server list (" << wd->master_data.size () / 1024 << " KiB)";
+				SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
 			}
 
 			{
@@ -362,26 +380,20 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 
 			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 0, 0);
 
-			std::wostringstream ss;
-			ss << wd->master_data.size () << " bytes recieved";
-			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
-
 			static_assert (sizeof (server_endpoint) == 6, "server_endpoint is a weird size");
-			std::vector<unsigned char> decoded_data (wd->master_data.size () / 5 * sizeof (server_endpoint));
-			int len = enctypex_decoder_convert_to_ipport (&wd->master_data[0] + wd->enctypex_data.start, wd->master_data.size () - wd->enctypex_data.start, &decoded_data[0], nullptr, 0, 0);
+			std::vector<server_endpoint> decoded_data (wd->master_data.size () / 5); // XXX size seems like a bit of a guess!
+			int len = enctypex_decoder_convert_to_ipport (&wd->master_data[0] + wd->enctypex_data.start, wd->master_data.size () - wd->enctypex_data.start, reinterpret_cast<unsigned char*> (decoded_data.data ()), nullptr, 0, 0);
 			assert (len >= 0); // XXX handle
-
-			/*std::ofstream x (R"(D:\sam\desktop\test.txt)");
-			std::copy (decoded_data.begin (), decoded_data.end (), std::ostreambuf_iterator<char> (x));*/
-
-			for (server_endpoint* e = reinterpret_cast<server_endpoint*> (&decoded_data[0]); reinterpret_cast<unsigned char*> (e) < &decoded_data[decoded_data.size ()]; ++e) {
+			std::copy (decoded_data.begin (), decoded_data.end (), std::inserter (wd->server_list, wd->server_list.begin ()));
+			/*for (server_endpoint& e: decoded_data) {
+				wd->server_list.insert (e);
 				std::wostringstream ss;
-				ss << inet_ntoa (e->ip) << ':' << ntohs (e->port);
+				ss << inet_ntoa (e.ip) << ':' << ntohs (e.port);
 				MessageBox (hWnd, ss.str ().c_str (), L"", 0);
-			}
+			}*/
 
-			ss.str (L"");
-			ss << decoded_data.size () / sizeof (server_endpoint) << " servers";
+			std::wostringstream ss;
+			ss << wd->server_list.size () << " servers";
 			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
 
 			return 0;
