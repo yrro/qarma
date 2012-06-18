@@ -25,6 +25,8 @@ extern "C" {
 #include "enctypex_decoder.h"
 }
 
+#include <fstream>
+
 static const int control_margin = 10;
 
 static const wchar_t main_window_class[] = L"qarma.main";
@@ -109,9 +111,9 @@ enum master_protocol_stage {
 };
 
 struct server_endpoint {
-	std::uint32_t ip;
+	in_addr ip;
 	std::uint16_t port;
-};
+} __attribute ((packed));
 
 struct window_data {
 	NONCLIENTMETRICS metrics;
@@ -122,7 +124,7 @@ struct window_data {
 	enctypex_data_t enctypex_data;
 	std::array<unsigned char, 9> master_validate;
 	std::vector<unsigned char> master_data;
-	std::vector<server_endpoint> server_list;
+	//std::vector<server_endpoint> server_list;
 
 	window_data (): message_font (nullptr, DeleteObject), master_stage (error) {
 		master_data.reserve (16384);
@@ -356,12 +358,32 @@ LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD ws
 	case complete:
 		switch (wsa_event) {
 		case FD_CLOSE:
+			wd->master_socket = SOCKET_wrapper ();
+
 			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 0, 0);
 
-			wd->master_socket = SOCKET_wrapper ();
 			std::wostringstream ss;
 			ss << wd->master_data.size () << " bytes recieved";
 			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
+
+			static_assert (sizeof (server_endpoint) == 6, "server_endpoint is a weird size");
+			std::vector<unsigned char> decoded_data (wd->master_data.size () / 5 * sizeof (server_endpoint));
+			int len = enctypex_decoder_convert_to_ipport (&wd->master_data[0] + wd->enctypex_data.start, wd->master_data.size () - wd->enctypex_data.start, &decoded_data[0], nullptr, 0, 0);
+			assert (len >= 0); // XXX handle
+
+			/*std::ofstream x (R"(D:\sam\desktop\test.txt)");
+			std::copy (decoded_data.begin (), decoded_data.end (), std::ostreambuf_iterator<char> (x));*/
+
+			for (server_endpoint* e = reinterpret_cast<server_endpoint*> (&decoded_data[0]); reinterpret_cast<unsigned char*> (e) < &decoded_data[decoded_data.size ()]; ++e) {
+				std::wostringstream ss;
+				ss << inet_ntoa (e->ip) << ':' << ntohs (e->port);
+				MessageBox (hWnd, ss.str ().c_str (), L"", 0);
+			}
+
+			ss.str (L"");
+			ss << decoded_data.size () / sizeof (server_endpoint) << " servers";
+			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), ss.str ().c_str ());
+
 			return 0;
 		break;
 		}
