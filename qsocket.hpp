@@ -1,9 +1,31 @@
 #ifndef QARMA_QSOCKET_HPP
 #define QARMA_QSOCKET_HPP
 
-#define STRICT
+#include <algorithm>
+
 #include <winsock2.h>
 #include <windows.h>
+
+class winsock_wrapper {
+	int _error;
+	WSADATA wsadata;
+
+public:
+	winsock_wrapper () {
+		_error = WSAStartup (MAKEWORD (2, 2), &wsadata);
+	}
+
+	winsock_wrapper& operator= (const winsock_wrapper&) = delete;
+	winsock_wrapper (const winsock_wrapper&) = delete;
+
+	~winsock_wrapper () {
+		WSACleanup ();
+	}
+
+	int error () const {
+		return this->_error;
+	}
+};
 
 class SOCKET_wrapper {
 	SOCKET s;
