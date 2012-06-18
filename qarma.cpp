@@ -8,14 +8,17 @@
 #include <set>
 #include <vector>
 
+// windowsx.h uses some TCHAR-based stuff, so ensure that we're using wide characters
 #ifndef UNICODE
-#error Must build in Unicode mode
+# error Must build in Unicode mode
 #else
-#define _UNICODE
+# define _UNICODE
 #endif
 
 #define STRICT
-#include <winsock2.h>
+
+#include "qsocket.hpp"
+
 #include <windows.h>
 #include <windowsx.h>
 
@@ -61,48 +64,6 @@ void explain (const wchar_t* msg, DWORD e = GetLastError ()) {
 	if (errmsg)
 		LocalFree (reinterpret_cast<LPVOID> (errmsg));
 }
-
-class SOCKET_wrapper {
-	SOCKET s;
-public:
-	SOCKET_wrapper (): s (INVALID_SOCKET) {}
-
-	SOCKET_wrapper (int af, int type, int protocol): s (socket (af, type, protocol)) {
-		std::wostringstream ss;
-		ss << L"socket " << s << " created";
-		OutputDebugString (ss.str ().c_str ());
-	}
-
-	SOCKET_wrapper& operator= (SOCKET_wrapper&& other) {
-		std::wostringstream ss;
-		ss << L"socket " << this->s << " move assignment (other socket " << other.s << ')';
-		OutputDebugString (ss.str ().c_str ());
-		std::swap (this->s, other.s);
-		return *this;
-	}
-
-	SOCKET_wrapper (SOCKET_wrapper&& other): s (INVALID_SOCKET) {
-		std::wostringstream ss;
-		ss << L"socket move constructor (other socket " << other.s;
-		*this = std::move (other);
-	}
-
-	SOCKET_wrapper& operator= (const SOCKET_wrapper&) = delete;
-	SOCKET_wrapper (const SOCKET_wrapper&) = delete;
-
-	~SOCKET_wrapper () {
-		if (s != INVALID_SOCKET) {
-			std::wostringstream ss;
-			ss << L"socket " << s << " destroyed";
-			OutputDebugString (ss.str ().c_str ());
-			closesocket (s);
-		}
-	}
-
-	operator SOCKET () const {
-		return s;
-	}
-};
 
 enum master_protocol_stage {
 	error,
