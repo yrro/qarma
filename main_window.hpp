@@ -7,14 +7,9 @@
 #include <vector>
 
 #include "master_proto.hpp"
-#include "qsocket.hpp"
 
 #include <windows.h>
 #include <windowsx.h>
-
-extern "C" {
-#include "enctypex_decoder.h"
-}
 
 static const wchar_t main_window_class[] = L"qarma.main";
 static const wchar_t main_window_title[] = L"Arma 2 player hunter";
@@ -23,16 +18,10 @@ struct window_data {
 	NONCLIENTMETRICS metrics;
 	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
 
-	master_protocol_stage master_stage;
-	SOCKET_wrapper master_socket;
-	enctypex_data_t enctypex_data;
-	std::array<unsigned char, 9> master_validate;
-	std::vector<unsigned char> master_data;
+	master_protocol mproto;
 	std::set<server_endpoint> server_list;
 
-	window_data (): message_font (nullptr, DeleteObject), master_stage (error) {
-		master_data.reserve (16384);
-	}
+	window_data (): message_font (nullptr, DeleteObject) {}
 };
 
 BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT lpcs);
