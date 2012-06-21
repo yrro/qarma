@@ -211,26 +211,10 @@ void master_protocol::state_request_sent (WORD event, WORD error) {
 			return;
 		}
 		{
-			int r;
 			std::array<char, 8192> buf;
-			r = recv (socket, &buf[0], buf.size (), 0);
-			if (r == SOCKET_ERROR) {
-				abort (); // XXX is this possible?
-				state = master_protocol_state::error;
-				on_error (wstrerror (WSAGetLastError ()));
-				//wd->master_socket = qsocket ();
-				return;
-			}
-			assert (r);
-			/*else if (r == 0) {
-				wd->master_stage = error;
-				wd->master_socket = qsocket ();
-
-				std::wostringstream ss;
-				ss << L"premature end-of-data. recieved " << wd->data.size () << " bytes in total";
-				MessageBox (hWnd, ss.str ().c_str (), main_window_title, 0);
-				return 0;
-			}*/
+			int r = recv (socket, &buf[0], buf.size (), 0);
+			assert (r != SOCKET_ERROR);
+			assert (r > 0);
 			std::copy (buf.begin (), buf.begin () + r, std::back_inserter (data));
 
 			on_progress (data.size ());
