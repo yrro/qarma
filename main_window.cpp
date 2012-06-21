@@ -109,3 +109,4 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	}
 	return DefWindowProc (hWnd, uMsg, wParam, lParam);
 }
+// vim: ts=4 sts=4 sw=4 noet

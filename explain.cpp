@@ -22,3 +22,4 @@ void explain (const wchar_t* msg, DWORD e) {
 	ss << msg << ".\n\n" << e << ": " << wstrerror (e);
 	MessageBox (0, ss.str ().c_str (), L"Qarma", MB_ICONEXCLAMATION);
 }
+// vim: ts=4 sts=4 sw=4 noet

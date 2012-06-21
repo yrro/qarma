@@ -268,3 +268,4 @@ void master_protocol::state_complete (WORD event, WORD error) {
 		on_error (ss.str ());
 	}
 }
+// vim: ts=4 sts=4 sw=4 noet

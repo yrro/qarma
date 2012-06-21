@@ -25,3 +25,4 @@ struct window_data {
 LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif
+// vim: ts=4 sts=4 sw=4 noet
