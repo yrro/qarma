@@ -27,12 +27,12 @@ public:
 	}
 };
 
-class SOCKET_wrapper {
+class qsocket {
 	SOCKET s;
 public:
-	SOCKET_wrapper (): s (INVALID_SOCKET) {}
+	qsocket (): s (INVALID_SOCKET) {}
 
-	SOCKET_wrapper (int af, int type, int protocol): s (socket (af, type, protocol)) {
+	qsocket (int af, int type, int protocol): s (socket (af, type, protocol)) {
 #ifdef QARMA_DEBUG_QSOCKET
 		std::wostringstream ss;
 		ss << L"socket " << s << " created";
@@ -40,7 +40,7 @@ public:
 #endif
 	}
 
-	SOCKET_wrapper& operator= (SOCKET_wrapper&& other) {
+	qsocket& operator= (qsocket&& other) {
 #ifdef QARMA_DEBUG_QSOCKET
 		std::wostringstream ss;
 		ss << L"socket " << this->s << " move assignment (other socket " << other.s << ')';
@@ -50,7 +50,7 @@ public:
 		return *this;
 	}
 
-	SOCKET_wrapper (SOCKET_wrapper&& other): s (INVALID_SOCKET) {
+	qsocket (qsocket&& other): s (INVALID_SOCKET) {
 #ifdef QARMA_DEBUG_QSOCKET
 		std::wostringstream ss;
 		ss << L"socket move constructor (other socket " << other.s;
@@ -58,10 +58,10 @@ public:
 		*this = std::move (other);
 	}
 
-	SOCKET_wrapper& operator= (const SOCKET_wrapper&) = delete;
-	SOCKET_wrapper (const SOCKET_wrapper&) = delete;
+	qsocket& operator= (const qsocket&) = delete;
+	qsocket (const qsocket&) = delete;
 
-	~SOCKET_wrapper () {
+	~qsocket () {
 		if (s != INVALID_SOCKET) {
 #ifdef QARMA_DEBUG_QSOCKET
 			std::wostringstream ss;

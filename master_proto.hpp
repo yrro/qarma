@@ -47,7 +47,7 @@ class master_protocol {
 	} state;
 	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup;
 	std::vector<unsigned char> data;
-	SOCKET_wrapper socket;
+	qsocket socket;
 
 	enctypex_data_t enctypex_data;
 	std::array<unsigned char, 9> master_validate;

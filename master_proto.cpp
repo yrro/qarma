@@ -106,7 +106,7 @@ void master_protocol::refresh () {
 		lookup.reset (tmp);
 	}
 
-	socket = SOCKET_wrapper (AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	socket = qsocket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (socket == INVALID_SOCKET) {
 		on_error (wstrerror (GetLastError ()));
 		return;
@@ -218,13 +218,13 @@ void master_protocol::state_request_sent (WORD event, WORD error) {
 				abort (); // XXX is this possible?
 				state = master_protocol_state::error;
 				on_error (wstrerror (WSAGetLastError ()));
-				//wd->master_socket = SOCKET_wrapper ();
+				//wd->master_socket = qsocket ();
 				return;
 			}
 			assert (r);
 			/*else if (r == 0) {
 				wd->master_stage = error;
-				wd->master_socket = SOCKET_wrapper ();
+				wd->master_socket = qsocket ();
 
 				std::wostringstream ss;
 				ss << L"premature end-of-data. recieved " << wd->data.size () << " bytes in total";
@@ -269,7 +269,7 @@ void master_protocol::state_complete (WORD event, WORD error) {
 			return;
 		}
 
-		socket = SOCKET_wrapper ();
+		socket = qsocket ();
 
 		static_assert (sizeof (server_endpoint) == 6, "server_endpoint is a weird size");
 		{
