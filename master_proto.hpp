@@ -16,23 +16,7 @@ extern "C" {
 }
 
 #include "qsocket.hpp"
-
-struct server_endpoint {
-	in_addr ip;
-	std::uint16_t port;
-} __attribute ((packed));
-
-inline bool operator< (const in_addr& a, const in_addr& b) {
-	return a.S_un.S_addr < b.S_un.S_addr;
-}
-
-inline bool operator== (const in_addr& a, const in_addr& b) {
-	return a.S_un.S_addr == b.S_un.S_addr;
-}
-
-inline bool operator< (const server_endpoint& a, const server_endpoint& b) {
-	return a.ip < b.ip || (a.ip == b.ip && a.port < b.port);
-}
+#include "server_common.hpp"
 
 class master_protocol {
 	std::unique_ptr<HWND__, decltype(&DestroyWindow)> hwnd;
