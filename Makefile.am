@@ -4,7 +4,7 @@ AM_CXXFLAGS := -Wall -Wextra -std=c++0x -municode -mwindows
 noinst_PROGRAMS := qarma
 
 qarma_LDADD := -lws2_32 -lcomctl32
-qarma_SOURCES := explain.cpp main_window.cpp master_proto.cpp qarma.cpp qarma-rc.rc enctypex_decoder.c
+qarma_SOURCES := explain.cpp main_window.cpp master_proto.cpp qarma.cpp querymanager.cpp qarma-rc.rc enctypex_decoder.c
 
 qarma-rc.o: qarma.manifest
 

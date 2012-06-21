@@ -2,13 +2,11 @@
 #define QARMA_MASTER_PROTO_HPP
 
 #include <array>
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
 #include <string>
 
-#include <winsock2.h>
 #include <ws2tcpip.h>
 
 extern "C" {

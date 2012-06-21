@@ -8,6 +8,10 @@
 #include "main_window.hpp"
 #include "master_proto.hpp"
 
+namespace {
+	const wchar_t main_window_class[] = L"{078be6e6-0d3a-42f4-b21a-1d92c1c41c9e}";
+}
+
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int nCmdShow) {
 	INITCOMMONCONTROLSEX icc = INITCOMMONCONTROLSEX ();
 	icc.dwSize = sizeof icc;

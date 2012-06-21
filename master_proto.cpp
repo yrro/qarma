@@ -5,11 +5,8 @@
 
 #include <windowsx.h>
 
-// <http://blogs.msdn.com/b/oldnewthing/archive/2004/10/25/247180.aspx>
-extern "C" IMAGE_DOS_HEADER __ImageBase;
-#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
-
 #include "explain.hpp"
+#include "thiscomponent.hpp"
 
 #if 0
 # define REQUEST R"(\hostname\gamever\country\mapname\gametype\gamemode\numplayers\maxplayers)"
@@ -67,7 +64,6 @@ LRESULT WINAPI master_protocol::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LP
 master_protocol::master_protocol (): hwnd (nullptr, DestroyWindow), state (error), lookup (nullptr, freeaddrinfo) {
 	static const wchar_t window_class[] = L"{e63f597b-c513-4fb2-b9db-62c2eb572d8b}";
 	WNDCLASS wndclass;
-
 	if (!GetClassInfo (HINST_THISCOMPONENT, window_class, &wndclass)) {
 		wndclass = WNDCLASS ();
 		wndclass.lpfnWndProc = wndproc;
