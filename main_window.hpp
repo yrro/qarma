@@ -1,7 +1,6 @@
 #ifndef QARMA_MAIN_WINDOW_HPP
 #define QARMA_MAIN_WINDOW_HPP
 
-#include <array>
 #include <memory>
 #include <set>
 #include <vector>

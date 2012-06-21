@@ -92,7 +92,7 @@ LRESULT main_window_on_command (HWND hWnd, int id, HWND /*hCtl*/, UINT codeNotif
 			SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
 			SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list (0 KiB)");
 
-			wd->mproto.refresh (hWnd);
+			wd->mproto.refresh ();
 			return 0;
 		}
 		return 0;
@@ -108,11 +108,5 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	HANDLE_MSG(hWnd, WM_DESTROY, main_window_on_destroy);
 	HANDLE_MSG(hWnd, WM_COMMAND, main_window_on_command);
 	}
-
-	window_data* wd = reinterpret_cast<window_data*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
-	if (wd && wd->mproto.churn (uMsg, wParam, lParam)) {
-		return 0;
-	}
-
 	return DefWindowProc (hWnd, uMsg, wParam, lParam);
 }
