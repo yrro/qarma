@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <set>
@@ -27,10 +28,8 @@ BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
 
 	wd->metrics = NONCLIENTMETRICS ();
 	wd->metrics.cbSize = sizeof wd->metrics;
-	if (!SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof wd->metrics, &wd->metrics, 0)) {
-		explain (L"SystemParametersInfo failed");
-		return -1;
-	}
+	BOOL r = SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof wd->metrics, &wd->metrics, 0);
+	assert (r);
 	wd->message_font.reset (CreateFontIndirect (&wd->metrics.lfMessageFont));
 
 	if (HWND b = CreateWindow (WC_BUTTON, L"Get more servers",

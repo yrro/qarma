@@ -1,6 +1,5 @@
 #include <sstream>
 
-#include "main_window.hpp"
 #include "explain.hpp"
 
 std::wstring wstrerror (DWORD error) {
@@ -32,5 +31,5 @@ void explain (const wchar_t* msg, DWORD e) {
 	if (errmsg)
 		LocalFree (reinterpret_cast<LPVOID> (errmsg));
 */
-	MessageBox (0, ss.str ().c_str (), main_window_title, MB_ICONEXCLAMATION);
+	MessageBox (0, ss.str ().c_str (), L"Qarma", MB_ICONEXCLAMATION);
 }

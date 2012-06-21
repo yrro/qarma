@@ -10,8 +10,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
-static const wchar_t main_window_class[] = L"qarma.main";
-static const wchar_t main_window_title[] = L"Arma 2 player hunter";
+static const wchar_t main_window_class[] = L"{078be6e6-0d3a-42f4-b21a-1d92c1c41c9e}";
 
 struct window_data {
 	NONCLIENTMETRICS metrics;

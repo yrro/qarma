@@ -34,7 +34,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		return 1;
 	}
 
-	HWND hWnd = CreateWindow (main_window_class, main_window_title,
+	HWND hWnd = CreateWindow (main_window_class, L"Qarma",
 		WS_OVERLAPPEDWINDOW /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX */,
 		CW_USEDEFAULT, CW_USEDEFAULT, 1024, 720,
 		0, 0, hInstance, nullptr);
