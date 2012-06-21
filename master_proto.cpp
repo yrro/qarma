@@ -240,11 +240,6 @@ void master_protocol::state_request_sent (WORD event, WORD error) {
 			int len = data.size ();
 			unsigned char* endp = enctypex_decoder (reinterpret_cast<unsigned char*> (const_cast<char*> ("Xn221z")), &master_validate[0], &data[0], &len, &enctypex_data);
 			assert (endp);
-			/*{
-				std::wostringstream ss;
-				ss << L"data:" << reinterpret_cast<void*> (&data[0]) << " len:" << len << " ipport:" << endp << " datalen:" << (data.size () - (reinterpret_cast<unsigned char*> (endp) - &data[0]));
-				OutputDebugString (ss.str ().c_str ());
-			}*/
 			if (endp && enctypex_decoder_convert_to_ipport (endp, data.size () - (reinterpret_cast<unsigned char*> (endp) - &data[0]), nullptr, nullptr, 0, 0)) {
 				shutdown (socket, SD_RECEIVE); // XXX handle errors
 				state = complete;
