@@ -22,10 +22,6 @@ struct window_data {
 	window_data (): message_font (nullptr, DeleteObject) {}
 };
 
-BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT lpcs);
-LRESULT main_window_on_destroy (HWND hWnd);
-LRESULT main_window_on_command (HWND hWnd, int id, HWND hCtl, UINT codeNotify);
-LRESULT main_window_on_socket (HWND hWnd, SOCKET socket, WORD wsa_event, WORD wsa_error);
 LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif
