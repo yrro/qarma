@@ -18,7 +18,6 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 #endif
 
 namespace {
-	const wchar_t window_class[] = L"{e63f597b-c513-4fb2-b9db-62c2eb572d8b}";
 	const UINT window_message = RegisterWindowMessage (L"{be193e7e-2b1f-4963-8a3a-671aa79746e8}");
 
 	BOOL on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
@@ -66,7 +65,9 @@ LRESULT WINAPI master_protocol::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LP
 }
 
 master_protocol::master_protocol (): hwnd (nullptr, DestroyWindow), state (error), lookup (nullptr, freeaddrinfo) {
+	static const wchar_t window_class[] = L"{e63f597b-c513-4fb2-b9db-62c2eb572d8b}";
 	WNDCLASS wndclass;
+
 	if (!GetClassInfo (HINST_THISCOMPONENT, window_class, &wndclass)) {
 		wndclass = WNDCLASS ();
 		wndclass.lpfnWndProc = wndproc;
