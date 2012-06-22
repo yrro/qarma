@@ -21,8 +21,9 @@ namespace {
 	const int control_margin = 10;
 
 	const int idc_main_master_load = 0;
-	const int idc_main_progress = 1;
+	const int idc_main_master_progress = 1;
 	const int idc_main_master_count = 2;
+	const int idc_main_query_progress = 3;
 
 	BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
 		window_data* wd = new window_data;
@@ -44,9 +45,12 @@ namespace {
 			PostMessage (hWnd, WM_COMMAND, MAKELONG(idc_main_master_load, BN_CLICKED), reinterpret_cast<LPARAM> (b));
 		}
 
-		HWND p = CreateWindow (PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE,
+		HWND pmaster = CreateWindow (PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE,
 			control_margin, control_margin + 100, 200, 20,
-			hWnd, reinterpret_cast<HMENU> (idc_main_progress), nullptr, nullptr);
+			hWnd, reinterpret_cast<HMENU> (idc_main_master_progress), nullptr, nullptr);
+		HWND pquery = CreateWindow (PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_SMOOTH,
+			control_margin, control_margin + 100, 200, 20,
+			hWnd, reinterpret_cast<HMENU> (idc_main_query_progress), nullptr, nullptr);
 
 		HWND s = CreateWindow (WC_STATIC, L"test", WS_CHILD | WS_VISIBLE,
 			control_margin, control_margin + 120, 200, 24,
@@ -55,8 +59,12 @@ namespace {
 			SetWindowFont (s, wd->message_font.get (), true);
 		}
 
-		wd->mproto.on_error = [wd, s] (const std::wstring& msg) {
+		wd->mproto.on_error = [wd, pmaster, pquery, s] (const std::wstring& msg) {
 			wd->master_refreshing = false;
+			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
+			ShowWindow (pmaster, SW_HIDE);
+			ShowWindow (pquery, SW_SHOW);
+
 			SetWindowText (s, msg.c_str ());
 		};
 		wd->mproto.on_progress = [s] (unsigned int p) {
@@ -64,18 +72,23 @@ namespace {
 			ss << "Getting server list (" << p / 1024 << " KiB)";
 			SetWindowText (s, ss.str ().c_str ());
 		};
-		wd->mproto.on_found = std::bind (&querymanager::add, std::ref (wd->qm), std::placeholders::_1);
-		wd->mproto.on_complete = [wd, p, s] () {
+		wd->mproto.on_found = [wd] (const server_endpoint& ep) {
+			wd->qm.add_server (ep);
+		};
+		wd->mproto.on_complete = [wd, pmaster, pquery, s] () {
 			wd->master_refreshing = false;
-			SendMessage (p, PBM_SETMARQUEE, 0, 0);
+			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
+			ShowWindow (pmaster, SW_HIDE);
+			SendMessage (pquery, PBM_SETRANGE32, 0, wd->qm.server_count ());
+			SendMessage (pquery, PBM_SETPOS, wd->qm.server_count ()/2, 0);
+			ShowWindow (pquery, SW_SHOW);
 
 			std::wostringstream ss;
-			//ss << wd->server_list.size () << " servers";
-			ss << L"scan done";
+			ss << wd->qm.server_count () << L" servers";
 			SetWindowText (s, ss.str ().c_str ());
 		};
 
-		wd->qm.on_progress = [wd, p, s] (unsigned int ndone, unsigned int nqueued) {
+		wd->qm.on_progress = [wd, pquery, s] (unsigned int ndone, unsigned int nqueued) {
 			if (wd->master_refreshing)
 				return;
 
@@ -100,7 +113,9 @@ namespace {
 			switch (codeNotify) {
 			case BN_CLICKED:
 				wd->master_refreshing = true;
-				SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
+				SendMessage (GetDlgItem (hWnd, idc_main_master_progress), PBM_SETMARQUEE, 1, 0);
+				ShowWindow (GetDlgItem (hWnd, idc_main_query_progress), SW_HIDE);
+				ShowWindow (GetDlgItem (hWnd, idc_main_master_progress), SW_SHOW);
 				SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list (0 KiB)");
 
 				wd->mproto.refresh ();

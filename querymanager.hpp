@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 
 #include <windows.h>
 
@@ -14,13 +15,17 @@ class querymanager {
 	std::unique_ptr<HWND__, decltype(&DestroyWindow)> hwnd;
 	static LRESULT WINAPI wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+	std::set<server_endpoint> servers;
+
 public:
 	querymanager ();
 
 	querymanager& operator= (const querymanager&) = delete;
 	querymanager (const querymanager&) = delete;
 
-	void add (const server_endpoint& ep);
+	void add_server (const server_endpoint& ep);
+	std::size_t server_count ();
+
 	void inform (const std::wstring& name);
 
 	std::function<void (unsigned int ndone, unsigned int nqueued)> on_progress;

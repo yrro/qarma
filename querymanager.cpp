@@ -22,9 +22,14 @@ querymanager::querymanager (): hwnd (nullptr, DestroyWindow) {
 	assert (hwnd); // XXX proper error handling
 }
 
-void querymanager::add (const server_endpoint& /*ep*/) {
+void querymanager::add_server (const server_endpoint& ep) {
+	servers.insert (ep);
 }
 
 LRESULT WINAPI querymanager::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return DefWindowProc (hWnd, uMsg, wParam, lParam);
+}
+
+std::size_t querymanager::server_count () {
+	return servers.size ();
 }
