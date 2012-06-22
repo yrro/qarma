@@ -17,6 +17,8 @@ struct window_data {
 	master_protocol mproto;
 	querymanager qm;
 
+	bool master_refreshing;
+
 	window_data ();
 };
 

@@ -55,7 +55,8 @@ namespace {
 			SetWindowFont (s, wd->message_font.get (), true);
 		}
 
-		wd->mproto.on_error = [s] (const std::wstring& msg) {
+		wd->mproto.on_error = [wd, s] (const std::wstring& msg) {
+			wd->master_refreshing = false;
 			SetWindowText (s, msg.c_str ());
 		};
 		wd->mproto.on_progress = [s] (unsigned int p) {
@@ -65,6 +66,7 @@ namespace {
 		};
 		wd->mproto.on_found = std::bind (&querymanager::add, std::ref (wd->qm), std::placeholders::_1);
 		wd->mproto.on_complete = [wd, p, s] () {
+			wd->master_refreshing = false;
 			SendMessage (p, PBM_SETMARQUEE, 0, 0);
 
 			std::wostringstream ss;
@@ -97,6 +99,7 @@ namespace {
 		case idc_main_master_load:
 			switch (codeNotify) {
 			case BN_CLICKED:
+				wd->master_refreshing = true;
 				SendMessage (GetDlgItem (hWnd, idc_main_progress), PBM_SETMARQUEE, 1, 0);
 				SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list (0 KiB)");
 
@@ -121,6 +124,6 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 }
 
 
-window_data::window_data (): message_font (nullptr, DeleteObject) {}
+window_data::window_data (): message_font (nullptr, DeleteObject), master_refreshing (false) {}
 
 // vim: ts=4 sts=4 sw=4 noet
