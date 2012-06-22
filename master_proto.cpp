@@ -177,7 +177,7 @@ void master_protocol::state_connected (WORD event, WORD error) {
 
 			int r = send (socket, &buf[0], buf.size (), 0);
 			if (r == SOCKET_ERROR) {
-				abort (); // XXX is this even possible?
+				assert (0); abort (); // XXX is this even possible?
 				state = master_protocol_state::error;
 				on_error (wstrerror (WSAGetLastError ()));
 				return;
