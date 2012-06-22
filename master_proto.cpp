@@ -82,6 +82,8 @@ master_protocol::master_protocol (): hwnd (nullptr, DestroyWindow), state (error
 }
 
 void master_protocol::refresh () {
+	on_begin ();
+
 	state = master_protocol_state::error; // failure is assumed
 
 	data.clear ();

@@ -59,8 +59,18 @@ namespace {
 			SetWindowFont (s, wd->message_font.get (), true);
 		}
 
+		wd->mproto.on_begin = [wd, pmaster, pquery, s] () {
+			wd->master_refreshing = true;
+
+			SendMessage (pmaster, PBM_SETMARQUEE, 1, 0);
+			ShowWindow (pmaster, SW_SHOW);
+			ShowWindow (pquery, SW_HIDE);
+
+			SetWindowText (s, L"Getting server list (0 KiB)");
+		};
 		wd->mproto.on_error = [wd, pmaster, pquery, s] (const std::wstring& msg) {
 			wd->master_refreshing = false;
+
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			ShowWindow (pquery, SW_SHOW);
@@ -77,6 +87,7 @@ namespace {
 		};
 		wd->mproto.on_complete = [wd, pmaster, pquery, s] () {
 			wd->master_refreshing = false;
+
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			SendMessage (pquery, PBM_SETRANGE32, 0, wd->qm.server_count ());
@@ -112,12 +123,6 @@ namespace {
 		case idc_main_master_load:
 			switch (codeNotify) {
 			case BN_CLICKED:
-				wd->master_refreshing = true;
-				SendMessage (GetDlgItem (hWnd, idc_main_master_progress), PBM_SETMARQUEE, 1, 0);
-				ShowWindow (GetDlgItem (hWnd, idc_main_query_progress), SW_HIDE);
-				ShowWindow (GetDlgItem (hWnd, idc_main_master_progress), SW_SHOW);
-				SetWindowText (GetDlgItem (hWnd, idc_main_master_count), L"Getting server list (0 KiB)");
-
 				wd->mproto.refresh ();
 				return 0;
 			}

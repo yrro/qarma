@@ -47,6 +47,7 @@ public:
 
 	void refresh ();
 
+	std::function<void ()> on_begin;
 	std::function<void (const std::wstring&)> on_error;
 	std::function<void (unsigned int)> on_progress;
 	std::function<void (const server_endpoint&)> on_found;
