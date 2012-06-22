@@ -117,8 +117,8 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	HANDLE_MSG(hWnd, WM_DESTROY, main_window_on_destroy);
 	HANDLE_MSG(hWnd, WM_COMMAND, main_window_on_command);
 	}
-		return DefWindowProc (hWnd, uMsg, wParam, lParam);
-	}
+	return DefWindowProc (hWnd, uMsg, wParam, lParam);
+}
 
 
 window_data::window_data (): message_font (nullptr, DeleteObject) {}
