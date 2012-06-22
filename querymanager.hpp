@@ -3,21 +3,23 @@
 
 #include <functional>
 #include <memory>
-#include <set>
+#include <map>
+#include <vector>
 
 #include <windows.h>
 
+#include "query_proto.hpp"
 #include "server_common.hpp"
-
-struct server_info {};
 
 class querymanager {
 	std::unique_ptr<HWND__, decltype(&DestroyWindow)> hwnd;
 	static LRESULT WINAPI wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	std::set<server_endpoint> servers;
+	std::map<server_endpoint, server_info> servers;
+	std::vector<query_proto> protos;
 
 	void timer ();
+	void queue_query (query_proto& proto, std::map<server_endpoint, server_info>::value_type& server);
 
 public:
 	querymanager ();

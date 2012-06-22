@@ -107,6 +107,12 @@ namespace {
 			std::wostringstream ss;
 			ss << ndone << L" of " << nqueued << L" servers queried";
 		};
+		static int c = 0;
+		wd->qm.on_found = [&c] (const server_info& /*info*/) {
+			++c;
+			std::wostringstream ss; ss << c;
+			OutputDebugString (ss.str ().c_str ());
+		};
 
 		return TRUE; // later mangled by HANDLE_WM_CREATE macro
 	}

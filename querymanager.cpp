@@ -1,7 +1,10 @@
 #include "querymanager.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <limits>
 
+#include <windows.h>
 #include <windowsx.h>
 
 #include "thiscomponent.hpp"
@@ -14,9 +17,13 @@ namespace {
 		SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR> (lpcs->lpCreateParams)); // XXX handle errors
 		return TRUE;
 	}
+
+	bool stale (const server_info& info, ULONGLONG reference) {
+		return info.when < std::max (0ull, reference - 1000 * 60 * 5);
+	}
 }
 
-querymanager::querymanager (): hwnd (nullptr, DestroyWindow) {
+querymanager::querymanager (): hwnd (nullptr, DestroyWindow), protos (10) {
 	static const wchar_t window_class[] = L"{f99a0821-8383-4b65-b26c-d76dce7cec7d}";
 	WNDCLASS wndclass;
 	if (!GetClassInfo (HINST_THISCOMPONENT, window_class, &wndclass)) {
@@ -37,12 +44,42 @@ querymanager::querymanager (): hwnd (nullptr, DestroyWindow) {
 	assert (r); // proper error handling
 }
 
+void querymanager::queue_query (query_proto& proto, std::map<server_endpoint, server_info>::value_type& server) {
+	server.second.when = std::numeric_limits<decltype(server.second.when)>::max ();
+	proto.on_complete = [this, &server] (const server_info& info) {
+		server.second = info;
+		on_found (info);
+	};
+	proto.begin (server.first);
+}
+
 void querymanager::add_server (const server_endpoint& ep) {
-	servers.insert (ep);
+	auto i = servers.insert (std::make_pair (ep, server_info ()));
+	if (!i.second)
+		return;
+
+	for (auto& proto: protos) {
+		if (proto.state == query_proto::available) {
+			queue_query (proto, *i.first);
+			break;
+		}
+	}
 }
 
 void querymanager::timer () {
-	on_progress (75, 100);
+	auto now = GetTickCount64 ();
+
+	unsigned int ncomplete = 0;
+	for (auto& server: servers)
+		if (!stale (server.second, now))
+			++ncomplete;
+	on_progress (ncomplete, servers.size ());
+
+	for (auto& proto: protos)
+		if (proto.state == query_proto::available)
+			for (auto& server: servers)
+				if (stale (server.second, now))
+					queue_query (proto, server);
 }
 
 LRESULT WINAPI querymanager::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -68,3 +105,5 @@ LRESULT WINAPI querymanager::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 std::size_t querymanager::server_count () {
 	return servers.size ();
 }
+
+// vim: ts=4 sts=4 sw=4 noet

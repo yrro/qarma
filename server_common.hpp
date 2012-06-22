@@ -3,7 +3,13 @@
 
 #include <cstdint>
 
+#include <windows.h>
+
 #include <inaddr.h>
+
+struct server_info {
+	ULONGLONG when;
+};
 
 struct server_endpoint {
 	in_addr ip;
