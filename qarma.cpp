@@ -31,7 +31,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 	wcex.hInstance = hInstance;
 	//wcex.hIcon = something;
 	wcex.hCursor = LoadCursor (nullptr, IDC_ARROW);
-	wcex.hbrBackground = reinterpret_cast<HBRUSH> (1+COLOR_BTNFACE);
+	wcex.hbrBackground = GetSysColorBrush (COLOR_3DFACE);
 	wcex.lpszClassName = main_window_class;
 	if (!RegisterClassEx (&wcex)) {
 		explain (L"RegisterClassEx failed");
