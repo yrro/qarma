@@ -49,6 +49,7 @@ void querymanager::queue_query (query_proto& proto, std::map<server_endpoint, se
 	proto.on_complete = [this, &server] (const server_info& info) {
 		server.second = info;
 		on_found (info);
+		stale_scan ();
 	};
 	proto.begin (server.first);
 }
@@ -68,13 +69,17 @@ void querymanager::add_server (const server_endpoint& ep) {
 
 void querymanager::timer () {
 	auto now = GetTickCount64 ();
-
 	unsigned int ncomplete = 0;
 	for (auto& server: servers)
 		if (!stale (server.second, now))
 			++ncomplete;
 	on_progress (ncomplete, servers.size ());
 
+	stale_scan ();
+}
+
+void querymanager::stale_scan () {
+	auto now = GetTickCount64 ();
 	for (auto& proto: protos)
 		if (proto.state == query_proto::available)
 			for (auto& server: servers)

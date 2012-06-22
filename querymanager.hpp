@@ -20,6 +20,7 @@ class querymanager {
 
 	void timer ();
 	void queue_query (query_proto& proto, std::map<server_endpoint, server_info>::value_type& server);
+	void stale_scan ();
 
 public:
 	querymanager ();
