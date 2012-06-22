@@ -90,8 +90,6 @@ namespace {
 
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
-			SendMessage (pquery, PBM_SETRANGE32, 0, wd->qm.server_count ());
-			SendMessage (pquery, PBM_SETPOS, wd->qm.server_count ()/2, 0);
 			ShowWindow (pquery, SW_SHOW);
 
 			std::wostringstream ss;
@@ -102,6 +100,9 @@ namespace {
 		wd->qm.on_progress = [wd, pquery, s] (unsigned int ndone, unsigned int nqueued) {
 			if (wd->master_refreshing)
 				return;
+
+			SendMessage (pquery, PBM_SETRANGE32, 0, nqueued);
+			SendMessage (pquery, PBM_SETPOS, ndone, 0);
 
 			std::wostringstream ss;
 			ss << ndone << L" of " << nqueued << L" servers queried";

@@ -17,6 +17,8 @@ class querymanager {
 
 	std::set<server_endpoint> servers;
 
+	void timer ();
+
 public:
 	querymanager ();
 
