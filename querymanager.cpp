@@ -10,7 +10,9 @@
 #include "thiscomponent.hpp"
 
 namespace {
-	UINT_PTR timer_id = 1;
+	const UINT window_message = RegisterWindowMessage (L"{351c71e0-d777-4e88-a878-ddfd404df739}");
+
+	UINT_PTR timer_id = 149;
 
 	BOOL on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
 		assert (lpcs->lpCreateParams);
@@ -51,7 +53,7 @@ void querymanager::queue_query (query_proto& proto, std::map<server_endpoint, se
 		on_found (info);
 		stale_scan ();
 	};
-	proto.begin (server.first);
+	proto.begin (server.first, hwnd.get (), window_message);
 }
 
 void querymanager::add_server (const server_endpoint& ep) {
@@ -92,14 +94,42 @@ LRESULT WINAPI querymanager::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	HANDLE_MSG (hWnd, WM_CREATE, on_create);
 	}
 
-	if (uMsg == WM_TIMER) {
+	if (uMsg == WM_TIMER || uMsg == window_message) {
 		querymanager* self = reinterpret_cast<querymanager*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
 		assert (self);
 
 		switch (uMsg) {
 		case WM_TIMER:
+			assert (wParam == timer_id); // catch during development
 			if (wParam == timer_id)
 				self->timer ();
+			return 0;
+		}
+		if (uMsg == window_message) {
+			for (auto& proto: self->protos)
+				if (proto.socket == wParam) {
+					const WORD event = WSAGETSELECTEVENT (lParam);
+					const WORD error = WSAGETSELECTERROR (lParam);
+					assert (proto.state != query_proto::available);
+					switch (proto.state) {
+					case query_proto::available:
+						break;
+					case query_proto::connecting:
+						proto.state_connecting (event, error);
+						break;
+					case query_proto::connected:
+						proto.state_connected (event, error);
+						break;
+					case query_proto::init_sent:
+						proto.state_init_sent (event, error);
+						break;
+					case query_proto::request_sent:
+						proto.state_request_sent (event, error);
+						break;
+					}
+					return 0;
+				}
+			assert (0);
 			return 0;
 		}
 	}

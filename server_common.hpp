@@ -2,6 +2,7 @@
 #define QARMA_SERVER_COMMON_HPP
 
 #include <cstdint>
+#include <string>
 
 #include <windows.h>
 
@@ -9,6 +10,7 @@
 
 struct server_info {
 	ULONGLONG when;
+	std::wstring error;
 };
 
 struct server_endpoint {

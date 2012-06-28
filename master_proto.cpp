@@ -29,7 +29,6 @@ LRESULT WINAPI master_protocol::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	HANDLE_MSG (hWnd, WM_CREATE, on_create);
 	}
 	
-	assert (window_message);
 	if (uMsg == window_message) {
 		master_protocol* self = reinterpret_cast<master_protocol*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
 		assert (self);
@@ -106,12 +105,13 @@ void master_protocol::refresh () {
 
 	socket = qsocket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (socket == INVALID_SOCKET) {
-		on_error (wstrerror (GetLastError ()));
+		on_error (wstrerror (WSAGetLastError ()));
 		return;
 	}
 	
+	assert (window_message);
 	if (WSAAsyncSelect (socket, hwnd.get (), window_message, FD_READ|FD_WRITE|FD_CONNECT|FD_CLOSE) == SOCKET_ERROR) {
-		on_error (wstrerror (GetLastError ()));
+		on_error (wstrerror (WSAGetLastError ()));
 		return;
 	}
 

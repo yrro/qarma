@@ -3,14 +3,28 @@
 
 #include <functional>
 
+#include <windows.h>
+
 #include "server_common.hpp"
+#include "qsocket.hpp"
 
 struct query_proto {
 	enum {
-		available
+		available,
+		connecting,
+		connected,
+		init_sent,
+		request_sent
 	} state;
 
-	void begin (const server_endpoint& endpoint);
+	qsocket socket;
+
+	void begin (const server_endpoint& endpoint, HWND hwnd, UINT window_message);
+
+	void state_connecting (WORD event, WORD error);
+	void state_connected (WORD event, WORD error);
+	void state_init_sent (WORD event, WORD error);
+	void state_request_sent (WORD event, WORD error);
 
 	std::function<void (const server_info&)> on_complete;
 };
