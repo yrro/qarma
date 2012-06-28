@@ -26,8 +26,8 @@ namespace {
 	const int idc_main_master_count = 2;
 	const int idc_main_query_progress = 3;
 
-	BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT /*lpcs*/) {
-		window_data* wd = new window_data;
+	BOOL main_window_on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
+		window_data* wd = reinterpret_cast<window_data*> (lpcs->lpCreateParams);
 		SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR> (wd));
 
 		wd->metrics = NONCLIENTMETRICS ();
@@ -114,8 +114,7 @@ namespace {
 		return TRUE; // later mangled by HANDLE_WM_CREATE macro
 	}
 
-	LRESULT main_window_on_destroy (HWND hWnd) {
-		delete reinterpret_cast<window_data*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
+	LRESULT main_window_on_destroy (HWND) {
 		PostQuitMessage (0);
 		return 0;
 	}

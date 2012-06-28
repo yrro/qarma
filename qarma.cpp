@@ -40,10 +40,11 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		return 1;
 	}
 
+	window_data wd;
 	HWND hWnd = CreateWindow (main_window_class, L"Qarma",
 		WS_OVERLAPPEDWINDOW /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX */,
 		CW_USEDEFAULT, CW_USEDEFAULT, 1024, 720,
-		0, 0, hInstance, nullptr);
+		0, 0, hInstance, &wd);
 	if (!hWnd) {
 		explain (L"CreateWindow failed");
 		return 1;
