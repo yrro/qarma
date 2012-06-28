@@ -13,6 +13,7 @@
 #include <windowsx.h>
 
 #include <commctrl.h>
+#include <process.h>
 #include <ws2tcpip.h>
 
 #include "explain.hpp"
@@ -59,35 +60,29 @@ namespace {
 			SetWindowFont (s, wd->message_font.get (), true);
 		}
 
-		wd->mproto.on_begin = [wd, pmaster, pquery, s] () {
-			wd->master_refreshing = true;
-
+		wd->on_master_begin = [wd, pmaster, pquery, s] () {
 			SendMessage (pmaster, PBM_SETMARQUEE, 1, 0);
 			ShowWindow (pmaster, SW_SHOW);
 			ShowWindow (pquery, SW_HIDE);
 
 			SetWindowText (s, L"Getting server list (0 KiB)");
 		};
-		wd->mproto.on_error = [wd, pmaster, pquery, s] (const std::wstring& msg) {
-			wd->master_refreshing = false;
-
+		wd->on_master_error = [wd, pmaster, pquery, s] (const std::wstring& msg) {
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			ShowWindow (pquery, SW_SHOW);
 
 			SetWindowText (s, msg.c_str ());
 		};
-		wd->mproto.on_progress = [s] (unsigned int p) {
+		wd->on_master_progress = [s] (unsigned int p) {
 			std::wostringstream ss;
 			ss << "Getting server list (" << p / 1024 << " KiB)";
 			SetWindowText (s, ss.str ().c_str ());
 		};
-		wd->mproto.on_found = [wd] (const server_endpoint& ep) {
+		wd->on_master_found = [wd] (const server_endpoint& ep) {
 			wd->qm.add_server (ep);
 		};
-		wd->mproto.on_complete = [wd, pmaster, pquery, s] () {
-			wd->master_refreshing = false;
-
+		wd->on_master_complete = [wd, pmaster, pquery, s] () {
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			ShowWindow (pquery, SW_SHOW);
@@ -98,7 +93,9 @@ namespace {
 		};
 
 		wd->qm.on_progress = [wd, pquery, s] (unsigned int ndone, unsigned int nqueued) {
-			if (wd->master_refreshing)
+			/*if (wd->master_refreshing)
+				return;*/
+			if (wd->mpt)
 				return;
 
 			SendMessage (pquery, PBM_SETRANGE32, 0, nqueued);
@@ -110,8 +107,8 @@ namespace {
 		static int c = 0;
 		wd->qm.on_found = [&c] (const server_info& /*info*/) {
 			++c;
-			std::wostringstream ss; ss << c;
-			OutputDebugString (ss.str ().c_str ());
+			//std::wostringstream ss; ss << c;
+			//OutputDebugString (ss.str ().c_str ());
 		};
 
 		return TRUE; // later mangled by HANDLE_WM_CREATE macro
@@ -130,7 +127,18 @@ namespace {
 		case idc_main_master_load:
 			switch (codeNotify) {
 			case BN_CLICKED:
-				wd->mproto.refresh ();
+				if (wd->mpt) {
+					OutputDebugString (L"not running another thread");
+					return 0;
+				}
+				wd->mpa.hwnd = hWnd;
+				wd->mpt.reset (reinterpret_cast<void*> (_beginthreadex (nullptr, 0, &master_proto, &wd->mpa, CREATE_SUSPENDED, nullptr)));
+				if (!wd->mpt) {
+					std::wostringstream ss;
+					ss << L"_beginthreadex failed: " << errno;
+					MessageBox (hWnd, ss.str ().c_str (), L"!", 0);
+				}
+				ResumeThread (wd->mpt.get ()); // XXX error handling
 				return 0;
 			}
 			return 0;
@@ -147,10 +155,29 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	HANDLE_MSG(hWnd, WM_DESTROY, main_window_on_destroy);
 	HANDLE_MSG(hWnd, WM_COMMAND, main_window_on_command);
 	}
+
+	window_data* wd = reinterpret_cast<window_data*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
+	if (wd) {
+		if (uMsg == qm_master_begin)
+			wd->on_master_begin ();
+		else if (uMsg == qm_master_error) {
+			wd->on_master_error (*reinterpret_cast<const std::wstring*> (lParam));
+			wd->mpt.reset (nullptr);
+		}
+		else if (uMsg == qm_master_progress)
+			wd->on_master_progress (lParam);
+		else if (uMsg == qm_master_found)
+			wd->on_master_found (*reinterpret_cast<const server_endpoint*> (lParam));
+		else if (uMsg == qm_master_complete) {
+			wd->on_master_complete ();
+			wd->mpt.reset (nullptr);
+		}
+	}
+
 	return DefWindowProc (hWnd, uMsg, wParam, lParam);
 }
 
 
-window_data::window_data (): message_font (nullptr, DeleteObject), master_refreshing (false) {}
+window_data::window_data (): message_font (nullptr, DeleteObject), /*master_refreshing (false),*/ mpt (nullptr, CloseHandle) {}
 
 // vim: ts=4 sts=4 sw=4 noet

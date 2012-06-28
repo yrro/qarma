@@ -1,12 +1,26 @@
 #include "master_proto.hpp"
 
+#include <array>
 #include <cassert>
+#include <memory>
 #include <sstream>
+#include <vector>
 
-#include <windowsx.h>
+#include <ws2tcpip.h>
+
+extern "C" {
+#include "enctypex_decoder.h"
+}
 
 #include "explain.hpp"
-#include "thiscomponent.hpp"
+#include "qsocket.hpp"
+#include "server_common.hpp"
+
+const UINT qm_master_begin = RegisterWindowMessage (L"2337348e-fa22-4528-aac0-8dd90c36b816");
+const UINT qm_master_error = RegisterWindowMessage (L"e9267a7b-63df-4ce5-9eda-8ac1d6def246");
+const UINT qm_master_progress = RegisterWindowMessage (L"b1e08a3f-a391-4314-8b83-e43e6137649e");
+const UINT qm_master_found = RegisterWindowMessage (L"8818b878-d8da-4367-aa66-1c73e42c8494");
+const UINT qm_master_complete = RegisterWindowMessage (L"a1837bb5-2756-4bbb-b15d-0f182dcf3d8d");
 
 #if 0
 # define REQUEST R"(\hostname\gamever\country\mapname\gametype\gamemode\numplayers\maxplayers)"
@@ -14,82 +28,12 @@
 # define REQUEST ""
 #endif
 
-namespace {
-	const UINT window_message = RegisterWindowMessage (L"{be193e7e-2b1f-4963-8a3a-671aa79746e8}");
+__stdcall unsigned int master_proto (void* _args) {
+	auto args = reinterpret_cast<master_proto_args*> (_args);
 
-	BOOL on_create (HWND hWnd, LPCREATESTRUCT lpcs) {
-		assert (lpcs->lpCreateParams);
-		SetWindowLongPtr (hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR> (lpcs->lpCreateParams)); // XXX handle errors
-		return TRUE;
-	}
-}
-	
-LRESULT WINAPI master_protocol::wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	switch (uMsg) {
-	HANDLE_MSG (hWnd, WM_CREATE, on_create);
-	}
-	
-	assert (window_message);
-	if (uMsg == window_message) {
-		master_protocol* self = reinterpret_cast<master_protocol*> (GetWindowLongPtr (hWnd, GWLP_USERDATA));
-		assert (self);
+	SendMessage (args->hwnd, qm_master_begin, args->id, 0);
 
-		if (self->socket == INVALID_SOCKET || wParam != self->socket) {
-			return 0;
-		}
-
-		const WORD event = WSAGETSELECTEVENT (lParam);
-		const WORD error = WSAGETSELECTERROR (lParam);
-		switch (self->state) {
-		case master_protocol_state::error:
-			break;
-		case connecting:
-			self->state_connecting (event, error);
-			break;
-		case connected:
-			self->state_connected (event, error);
-			break;
-		case request_sent:
-			self->state_request_sent (event, error);
-			break;
-		case complete:
-			self->state_complete (event, error);
-			break;
-		}
-	}
-
-	return DefWindowProc (hWnd, uMsg, wParam, lParam);
-}
-
-master_protocol::master_protocol (): hwnd (nullptr, DestroyWindow), state (error), lookup (nullptr, freeaddrinfo) {
-	static const wchar_t window_class[] = L"{e63f597b-c513-4fb2-b9db-62c2eb572d8b}";
-	WNDCLASS wndclass;
-	if (!GetClassInfo (HINST_THISCOMPONENT, window_class, &wndclass)) {
-		wndclass = WNDCLASS ();
-		wndclass.lpfnWndProc = wndproc;
-		wndclass.hInstance = HINST_THISCOMPONENT;
-		wndclass.lpszClassName = window_class;
-		ATOM r = RegisterClass (&wndclass);
-		assert (r);
-	}
-
-	hwnd.reset (CreateWindow (window_class, nullptr, 0,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		HWND_MESSAGE, nullptr, HINST_THISCOMPONENT, this));
-	assert (hwnd); // XXX proper error handling
-
-	data.reserve (16384);
-}
-
-void master_protocol::refresh () {
-	on_begin ();
-
-	state = master_protocol_state::error; // failure is assumed
-
-	data.clear ();
-
-	// TODO async
-	lookup.reset (nullptr);
+	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 	{
 		addrinfo hints = addrinfo ();
 		hints.ai_family = AF_INET;
@@ -98,172 +42,99 @@ void master_protocol::refresh () {
 		addrinfo* tmp;
 		int r = getaddrinfo ("arma2oapc.ms1.gamespy.com", "28910", &hints, &tmp); // TODO load balance
 		if (r) {
-			on_error (wstrerror (WSAGetLastError ()));
-			return;
+			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			return 0;
 		}
 		lookup.reset (tmp);
 	}
 
-	socket = qsocket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	qsocket socket {lookup->ai_family, lookup->ai_socktype, lookup->ai_protocol};
 	if (socket == INVALID_SOCKET) {
-		on_error (wstrerror (GetLastError ()));
-		return;
-	}
-	
-	if (WSAAsyncSelect (socket, hwnd.get (), window_message, FD_READ|FD_WRITE|FD_CONNECT|FD_CLOSE) == SOCKET_ERROR) {
-		on_error (wstrerror (GetLastError ()));
-		return;
+		SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+		return 0;
 	}
 
-	assert (lookup);
 	int r = connect (socket, lookup->ai_addr, lookup->ai_addrlen);
-	assert (r == SOCKET_ERROR && WSAGetLastError () == WSAEWOULDBLOCK);
-	
-	state = connecting;
-}
-
-void master_protocol::state_connecting (WORD event, WORD error) {
-	switch (event) {
-	case FD_CONNECT:
-		if (error) {
-			state = master_protocol_state::error;
-			on_error (wstrerror (error));
-			return;
-		}
-		state = connected;
-		return;
-
-	default:
-		std::wostringstream ss;
-		ss << L"synchronization error: state:" << state << " event:" << event << " error:" << error;
-		state = master_protocol_state::error;
-		on_error (ss.str ());
+	if (r == SOCKET_ERROR) {
+		SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+		return 0;
 	}
-}
 
-void master_protocol::state_connected (WORD event, WORD error) {
-	switch (event) {
-	case FD_WRITE:
-		if (error) {
-			state = master_protocol_state::error;
-			on_error (wstrerror (error));
-			return;
+	// transmit request
+	std::array<unsigned char, 9> master_validate;
+	enctypex_decoder_rand_validate (&master_validate[0]);
+	{
+		std::ostringstream packet;
+		packet << '\0'
+			   << '\1'
+			   << '\3'
+			   << '\0' // 32-bit
+			   << '\0'
+			   << '\0'
+			   << '\0'
+			   << "arma2oapc" << '\0'
+			   << "gslive" << '\0';
+		std::copy (master_validate.begin (), master_validate.end () - 1, std::ostreambuf_iterator<char> (packet)); // note: don't copy the final '\0' byte of master_validate
+		packet << "" << '\0' // filter (note, not preceeded by a '\0' separator either
+			   << REQUEST << '\0'
+			   << '\0'
+			   << '\0'
+			   << '\0'
+			   << '\1'; // 1 = requested information
+		std::vector<char> buf (2 + packet.str ().size ());
+		WSAHtons (socket, buf.size (), reinterpret_cast<u_short*> (&buf[0]));
+		const std::string s = packet.str ();
+		std::copy (s.begin (), s.end (), 2 + buf.begin ());
+
+		int r = send (socket, &buf[0], buf.size (), 0);
+		if (r == SOCKET_ERROR) {
+			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			return 0;
+		} else if (r != static_cast<int> (buf.size ())) {
+			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (L"short send"));
+			return 0;
 		}
-
-		{
-			enctypex_data.start = 0;
-			enctypex_decoder_rand_validate (&master_validate[0]);
-			std::ostringstream packet;
-			packet << '\0'
-				   << '\1'
-				   << '\3'
-				   << '\0' // 32-bit
-				   << '\0'
-				   << '\0'
-				   << '\0'
-				   << "arma2oapc" << '\0'
-				   << "gslive" << '\0';
-			std::copy (master_validate.begin (), master_validate.end () - 1, std::ostreambuf_iterator<char> (packet)); // note: don't copy the final '\0' byte of master_validate
-			packet << "" << '\0' // filter (note, not preceeded by a '\0' separator either
-				   << REQUEST << '\0'
-				   << '\0'
-				   << '\0'
-				   << '\0'
-				   << '\1'; // 1 = requested information
-			std::vector<char> buf (2 + packet.str ().size ());
-			WSAHtons (socket, buf.size (), reinterpret_cast<u_short*> (&buf[0]));
-			const std::string s = packet.str ();
-			std::copy (s.begin (), s.end (), 2 + buf.begin ());
-
-			int r = send (socket, &buf[0], buf.size (), 0);
-			if (r == SOCKET_ERROR) {
-				assert (0); abort (); // XXX is this even possible?
-				state = master_protocol_state::error;
-				on_error (wstrerror (WSAGetLastError ()));
-				return;
-			}
-			if (r != static_cast<int> (buf.size ())) {
-				state = master_protocol_state::error;
-				on_error (L"short write");
-				return;
-			}
-		}
-		shutdown (socket, SD_SEND); // XXX error check
-		state = request_sent;
-		return;
-
-	default:
-		std::wostringstream ss;
-		ss << L"synchronization error: state:" << state << " event:" << event << " error:" << error;
-		state = master_protocol_state::error;
-		on_error (ss.str ());
 	}
-}
+	shutdown (socket, SD_SEND); // XXX error check
 
-void master_protocol::state_request_sent (WORD event, WORD error) {
-	switch (event) {
-	case FD_READ:
-		if (error) {
-			state = master_protocol_state::error;
-			on_error (wstrerror (error));
-			return;
+	// read response
+	enctypex_data_t enctypex_data;
+	enctypex_data.start = 0;
+	std::vector<unsigned char> data;
+	data.reserve (16384);
+	while (true) {
+		std::array<char, 8192> buf;
+		int r = recv (socket, &buf[0], buf.size (), 0);
+		if (r == SOCKET_ERROR) {
+			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			return 0;
+		} else if (r == 0) {
+			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (L"short recv"));
+			return 0;
 		}
-		{
-			std::array<char, 8192> buf;
-			int r = recv (socket, &buf[0], buf.size (), 0);
-			assert (r != SOCKET_ERROR);
-			assert (r > 0);
-			std::copy (buf.begin (), buf.begin () + r, std::back_inserter (data));
+		std::copy (buf.begin (), buf.begin () + r, std::back_inserter (data));
+		SendMessage (args->hwnd, qm_master_progress, args->id, data.size ());
 
-			on_progress (data.size ());
+		int len = data.size ();
+		unsigned char* endp = enctypex_decoder (reinterpret_cast<unsigned char*> (const_cast<char*> ("Xn221z")), &master_validate[0], &data[0], &len, &enctypex_data);
+		assert (endp);
+		if (endp && enctypex_decoder_convert_to_ipport (endp, data.size () - (reinterpret_cast<unsigned char*> (endp) - &data[0]), nullptr, nullptr, 0, 0)) {
+			break;
 		}
-
-		{
-			int len = data.size ();
-			unsigned char* endp = enctypex_decoder (reinterpret_cast<unsigned char*> (const_cast<char*> ("Xn221z")), &master_validate[0], &data[0], &len, &enctypex_data);
-			assert (endp);
-			if (endp && enctypex_decoder_convert_to_ipport (endp, data.size () - (reinterpret_cast<unsigned char*> (endp) - &data[0]), nullptr, nullptr, 0, 0)) {
-				shutdown (socket, SD_RECEIVE); // XXX handle errors
-				state = complete;
-			}
-		}
-		return;
-
-	default:
-		std::wostringstream ss;
-		ss << L"synchronization error: state:" << state << " event:" << event << " error:" << error;
-		state = master_protocol_state::error;
-		on_error (ss.str ());
 	}
-}
+	shutdown (socket, SD_RECEIVE); // XXX handle errors
 
-void master_protocol::state_complete (WORD event, WORD error) {
-	switch (event) {
-	case FD_CLOSE:
-		if (error) {
-			state = master_protocol_state::error;
-			on_error (wstrerror (error));
-			return;
-		}
-
-		socket = qsocket ();
-
-		static_assert (sizeof (server_endpoint) == 6, "server_endpoint is a weird size");
-		{
-			std::vector<server_endpoint> decoded_data (data.size () / 5); // XXX size seems like a bit of a guess!
-			int len = enctypex_decoder_convert_to_ipport (&data[0] + enctypex_data.start, data.size () - enctypex_data.start, reinterpret_cast<unsigned char*> (decoded_data.data ()), nullptr, 0, 0);
-			assert (len >= 0); // XXX handle
-			std::for_each (decoded_data.cbegin (), decoded_data.cend (), on_found);
-		}
-
-		on_complete ();
-		return;
-
-	default:
-		std::wostringstream ss;
-		ss << L"synchronization error: state:" << state << " event:" << event << " error:" << error;
-		state = master_protocol_state::error;
-		on_error (ss.str ());
+	static_assert (sizeof (server_endpoint) == 6, "server_endpoint is a weird size");
+	{
+		std::vector<server_endpoint> decoded_data (data.size () / 5); // XXX size seems like a bit of a guess!
+		int len = enctypex_decoder_convert_to_ipport (&data[0] + enctypex_data.start, data.size () - enctypex_data.start, reinterpret_cast<unsigned char*> (decoded_data.data ()), nullptr, 0, 0);
+		assert (len >= 0); // XXX handle (see gsmyfunc.h line 715)
+		for (auto ep: decoded_data)
+			SendMessage (args->hwnd, qm_master_found, args->id, reinterpret_cast<LPARAM> (&ep));
 	}
+
+	SendMessage (args->hwnd, qm_master_complete, args->id, 0);
+	return 0;
 }
+
 // vim: ts=4 sts=4 sw=4 noet
