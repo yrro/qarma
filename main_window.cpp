@@ -93,8 +93,6 @@ namespace {
 		};
 
 		wd->qm.on_progress = [wd, pquery, s] (unsigned int ndone, unsigned int nqueued) {
-			/*if (wd->master_refreshing)
-				return;*/
 			if (wd->mpt)
 				return;
 
@@ -127,7 +125,6 @@ namespace {
 			switch (codeNotify) {
 			case BN_CLICKED:
 				if (wd->mpt) {
-					OutputDebugString (L"not running another thread");
 					return 0;
 				}
 				wd->mpa.hwnd = hWnd;
@@ -138,7 +135,7 @@ namespace {
 					wd->on_master_error (ss.str ());
 					return 0;
 				}
-				if (ResumeThread (wd->mpt.get ()) == -1) {
+				if (ResumeThread (wd->mpt.get ()) == static_cast<DWORD> (-1)) {
 					std::wostringstream ss;
 					ss << L"ResumeThread: " << wstrerror (GetLastError ());
 					wd->on_master_error (ss.str ());
