@@ -170,7 +170,6 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			wd->on_master_begin ();
 		else if (uMsg == qm_master_error) {
 			wd->on_master_error (*reinterpret_cast<const std::wstring*> (lParam));
-			wd->mpt.reset (nullptr);
 		}
 		else if (uMsg == qm_master_progress)
 			wd->on_master_progress (lParam);
@@ -178,7 +177,6 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			wd->on_master_found (*reinterpret_cast<const server_endpoint*> (lParam));
 		else if (uMsg == qm_master_complete) {
 			wd->on_master_complete ();
-			wd->mpt.reset (nullptr);
 		}
 	}
 

@@ -14,12 +14,8 @@ struct window_data {
 	NONCLIENTMETRICS metrics;
 	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
 
-	//bool master_refreshing;
 	master_proto_args mpa; // do not touch while mpt is running
 	std::unique_ptr<void, decltype (&CloseHandle)> mpt; // if this is null then the thread is not running
-	// actually it may have just signalled to us that it's finished, but still be returning...
-	// also, what happens if the thread returns without signalling to us? we'd never notice that it terminated!
-	// main loop should call MsgWaitForMultipleObjectsEx with QS_ALLINPUT, see rodrigo's answer to http://stackoverflow.com/questions/10866311/getmessage-with-a-timeout
 
 	std::function<void ()> on_master_begin;
 	std::function<void (const std::wstring&)> on_master_error;

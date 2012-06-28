@@ -53,13 +53,16 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 	ShowWindow (hWnd, nCmdShow);
 	UpdateWindow (hWnd);
 
+	std::vector<HANDLE> handles;
 	while (true) {
-		DWORD n = 0;
-		DWORD r = MsgWaitForMultipleObjects (0, nullptr, false, INFINITE, QS_ALLINPUT);
+		handles.clear ();
+		if (wd.mpt)
+			handles.push_back (wd.mpt.get ());
+		DWORD r = MsgWaitForMultipleObjects (handles.size (), &handles[0], false, INFINITE, QS_ALLINPUT);
 		if (r == WAIT_FAILED) {
 			explain (L"MsgWaitForMultipleObjects failed");
 			return 1;
-		} else if (r == WAIT_OBJECT_0 + n) {
+		} else if (r == WAIT_OBJECT_0 + handles.size ()) {
 			MSG msg;
 			while (PeekMessage (&msg, nullptr, 0, 0, PM_REMOVE)) {
 				if (msg.message == WM_QUIT)
@@ -67,6 +70,12 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 
 				TranslateMessage (&msg);
 				DispatchMessage (&msg);
+			}
+		} else if (r >= WAIT_OBJECT_0 && r < WAIT_OBJECT_0 + handles.size ()) {
+			int n = r - WAIT_OBJECT_0;
+			if (handles[n] == wd.mpt.get ()) {
+				wd.mpt.reset (nullptr);
+				wd.on_master_error (L"thread exited");
 			}
 		} else {
 			std::wostringstream ss;
