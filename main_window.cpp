@@ -135,10 +135,16 @@ namespace {
 				wd->mpt.reset (reinterpret_cast<void*> (_beginthreadex (nullptr, 0, &master_proto, &wd->mpa, CREATE_SUSPENDED, nullptr)));
 				if (!wd->mpt) {
 					std::wostringstream ss;
-					ss << L"_beginthreadex failed: " << errno;
-					MessageBox (hWnd, ss.str ().c_str (), L"!", 0);
+					ss << L"_beginthreadex: " << wstrerror (errno);
+					wd->on_master_error (ss.str ());
+					return 0;
 				}
-				ResumeThread (wd->mpt.get ()); // XXX error handling
+				if (ResumeThread (wd->mpt.get ()) == -1) {
+					std::wostringstream ss;
+					ss << L"ResumeThread: " << wstrerror (GetLastError ());
+					wd->on_master_error (ss.str ());
+					return 0;
+				}
 				return 0;
 			}
 			return 0;
