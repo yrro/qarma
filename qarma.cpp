@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "qsocket.hpp"
 
 #include <windows.h>
@@ -50,17 +52,27 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 	ShowWindow (hWnd, nCmdShow);
 	UpdateWindow (hWnd);
 
-	BOOL r;
-	MSG msg;
-	while ((r = GetMessage (&msg, nullptr, 0, 0)) > 0) {
-		TranslateMessage (&msg);
-		DispatchMessage (&msg);
+	while (true) {
+		DWORD n = 0;
+		DWORD r = MsgWaitForMultipleObjects (0, nullptr, false, INFINITE, QS_ALLINPUT);
+		if (r == WAIT_FAILED) {
+			explain (L"MsgWaitForMultipleObjects failed");
+			return 1;
+		} else if (r == WAIT_OBJECT_0 + n) {
+			MSG msg;
+			while (PeekMessage (&msg, nullptr, 0, 0, PM_REMOVE)) {
+				if (msg.message == WM_QUIT)
+					return msg.wParam;
+
+				TranslateMessage (&msg);
+				DispatchMessage (&msg);
+			}
+		} else {
+			std::wostringstream ss;
+			ss << L"MsgWaitForMultipleObjects returned an unexpected value: " << r;
+			MessageBox (hWnd, ss.str ().c_str (), L"Qarma", 0);
+		}
 	}
-	if (r == -1) {
-		explain (L"GetMessage failed");
-		return 1;
-	}
-	return msg.wParam;
 }
 
 // vim: ts=4 sts=4 sw=4 noet
