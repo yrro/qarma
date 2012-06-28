@@ -36,12 +36,12 @@ namespace {
 		assert (r);
 		wd->message_font.reset (CreateFontIndirect (&wd->metrics.lfMessageFont));
 
-		if (HWND b = CreateWindow (WC_BUTTON, L"Get more servers",
+		HWND b = CreateWindow (WC_BUTTON, L"Get more servers",
 			WS_CHILD | WS_VISIBLE,
 			control_margin, control_margin, 200, 24,
 			hWnd, reinterpret_cast<HMENU> (idc_main_master_load),
-			nullptr, nullptr))
-		{
+			nullptr, nullptr);
+		if (b) {
 			SetWindowFont (b, wd->message_font.get (), true);
 			PostMessage (hWnd, WM_COMMAND, MAKELONG(idc_main_master_load, BN_CLICKED), reinterpret_cast<LPARAM> (b));
 		}
@@ -60,14 +60,18 @@ namespace {
 			SetWindowFont (s, wd->message_font.get (), true);
 		}
 
-		wd->on_master_begin = [wd, pmaster, pquery, s] () {
+		wd->on_master_begin = [wd, pmaster, pquery, b, s] () {
+			Button_Enable (b, false);
+
 			SendMessage (pmaster, PBM_SETMARQUEE, 1, 0);
 			ShowWindow (pmaster, SW_SHOW);
 			ShowWindow (pquery, SW_HIDE);
 
 			SetWindowText (s, L"Getting server list (0 KiB)");
 		};
-		wd->on_master_error = [wd, pmaster, pquery, s] (const std::wstring& msg) {
+		wd->on_master_error = [wd, pmaster, pquery, b, s] (const std::wstring& msg) {
+			Button_Enable (b, true);
+
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			ShowWindow (pquery, SW_SHOW);
@@ -82,7 +86,9 @@ namespace {
 		wd->on_master_found = [wd] (const server_endpoint& ep) {
 			wd->qm.add_server (ep);
 		};
-		wd->on_master_complete = [wd, pmaster, pquery, s] () {
+		wd->on_master_complete = [wd, pmaster, pquery, b, s] () {
+			Button_Enable (b, true);
+
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
 			ShowWindow (pmaster, SW_HIDE);
 			ShowWindow (pquery, SW_SHOW);
