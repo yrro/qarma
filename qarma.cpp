@@ -74,8 +74,17 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 		} else if (r >= WAIT_OBJECT_0 && r < WAIT_OBJECT_0 + handles.size ()) {
 			int n = r - WAIT_OBJECT_0;
 			if (handles[n] == wd.mpt.get ()) {
+				if (wd.master_refreshing) {
+					std::wostringstream ss;
+					ss << L"Unexpected exit (";
+					DWORD code;
+					if (GetExitCodeThread (wd.mpt.get (), &code))
+						ss << code << ')';
+					else
+						ss << wstrerror (GetLastError ()) << L" while getting exit code)";
+					wd.on_master_error (ss.str ());
+				}
 				wd.mpt.reset (nullptr);
-				wd.on_master_error (L"thread exited");
 			}
 		} else {
 			std::wostringstream ss;

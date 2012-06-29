@@ -61,6 +61,7 @@ namespace {
 		}
 
 		wd->on_master_begin = [wd, pmaster, pquery, b, s] () {
+			wd->master_refreshing = true;
 			Button_Enable (b, false);
 
 			SendMessage (pmaster, PBM_SETMARQUEE, 1, 0);
@@ -70,6 +71,7 @@ namespace {
 			SetWindowText (s, L"Getting server list (0 KiB)");
 		};
 		wd->on_master_error = [wd, pmaster, pquery, b, s] (const std::wstring& msg) {
+			wd->master_refreshing = false;
 			Button_Enable (b, true);
 
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
@@ -87,6 +89,7 @@ namespace {
 			wd->qm.add_server (ep);
 		};
 		wd->on_master_complete = [wd, pmaster, pquery, b, s] () {
+			wd->master_refreshing = false;
 			Button_Enable (b, true);
 
 			SendMessage (pmaster, PBM_SETMARQUEE, 0, 0);
@@ -99,7 +102,7 @@ namespace {
 		};
 
 		wd->qm.on_progress = [wd, pquery, s] (unsigned int ndone, unsigned int nqueued) {
-			if (wd->mpt)
+			if (wd->master_refreshing)
 				return;
 
 			SendMessage (pquery, PBM_SETRANGE32, 0, nqueued);
@@ -130,9 +133,8 @@ namespace {
 		case idc_main_master_load:
 			switch (codeNotify) {
 			case BN_CLICKED:
-				if (wd->mpt) {
+				if (wd->mpt)
 					return 0;
-				}
 				wd->mpa.hwnd = hWnd;
 				wd->mpt.reset (reinterpret_cast<void*> (_beginthreadex (nullptr, 0, &master_proto, &wd->mpa, CREATE_SUSPENDED, nullptr)));
 				if (!wd->mpt) {
@@ -184,6 +186,6 @@ LRESULT CALLBACK main_window_wndproc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 }
 
 
-window_data::window_data (): message_font (nullptr, DeleteObject), /*master_refreshing (false),*/ mpt (nullptr, CloseHandle) {}
+window_data::window_data (): message_font (nullptr, DeleteObject), master_refreshing (false), mpt (nullptr, CloseHandle) {}
 
 // vim: ts=4 sts=4 sw=4 noet

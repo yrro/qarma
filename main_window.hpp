@@ -14,6 +14,7 @@ struct window_data {
 	NONCLIENTMETRICS metrics;
 	std::unique_ptr<HFONT__, decltype (&DeleteObject)> message_font;
 
+	bool master_refreshing;
 	master_proto_args mpa; // do not touch while mpt is running
 	std::unique_ptr<void, decltype (&CloseHandle)> mpt; // if this is null then the thread is not running
 
