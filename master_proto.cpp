@@ -29,9 +29,9 @@ const UINT qm_master_complete = RegisterWindowMessage (L"a1837bb5-2756-4bbb-b15d
 #endif
 
 __stdcall unsigned int master_proto (void* _args) {
-	auto args = reinterpret_cast<master_proto_args*> (_args);
+	master_proto_args args = *reinterpret_cast<master_proto_args*> (_args);
 
-	SendMessage (args->hwnd, qm_master_begin, args->id, 0);
+	SendMessage (args.hwnd, qm_master_begin, args.id, 0);
 
 	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 	{
@@ -42,7 +42,7 @@ __stdcall unsigned int master_proto (void* _args) {
 		addrinfo* tmp;
 		int r = getaddrinfo ("arma2oapc.ms1.gamespy.com", "28910", &hints, &tmp); // TODO load balance
 		if (r) {
-			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
 		}
 		lookup.reset (tmp);
@@ -50,13 +50,13 @@ __stdcall unsigned int master_proto (void* _args) {
 
 	qsocket socket {lookup->ai_family, lookup->ai_socktype, lookup->ai_protocol};
 	if (socket == INVALID_SOCKET) {
-		SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+		SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 		return 0;
 	}
 
 	int r = connect (socket, lookup->ai_addr, lookup->ai_addrlen);
 	if (r == SOCKET_ERROR) {
-		SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+		SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 		return 0;
 	}
 
@@ -88,10 +88,10 @@ __stdcall unsigned int master_proto (void* _args) {
 
 		int r = send (socket, &buf[0], buf.size (), 0);
 		if (r == SOCKET_ERROR) {
-			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
 		} else if (r != static_cast<int> (buf.size ())) {
-			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (L"short send"));
+			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short send"));
 			return 0;
 		}
 	}
@@ -106,14 +106,14 @@ __stdcall unsigned int master_proto (void* _args) {
 		std::array<char, 8192> buf;
 		int r = recv (socket, &buf[0], buf.size (), 0);
 		if (r == SOCKET_ERROR) {
-			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
+			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
 		} else if (r == 0) {
-			SendMessage (args->hwnd, qm_master_error, args->id, reinterpret_cast<LPARAM> (L"short recv"));
+			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short recv"));
 			return 0;
 		}
 		std::copy (buf.begin (), buf.begin () + r, std::back_inserter (data));
-		SendMessage (args->hwnd, qm_master_progress, args->id, data.size ());
+		SendMessage (args.hwnd, qm_master_progress, args.id, data.size ());
 
 		int len = data.size ();
 		unsigned char* endp = enctypex_decoder (reinterpret_cast<unsigned char*> (const_cast<char*> ("Xn221z")), &master_validate[0], &data[0], &len, &enctypex_data);
@@ -130,10 +130,10 @@ __stdcall unsigned int master_proto (void* _args) {
 		int len = enctypex_decoder_convert_to_ipport (&data[0] + enctypex_data.start, data.size () - enctypex_data.start, reinterpret_cast<unsigned char*> (decoded_data.data ()), nullptr, 0, 0);
 		assert (len >= 0); // XXX handle (see gsmyfunc.h line 715)
 		for (auto ep: decoded_data)
-			SendMessage (args->hwnd, qm_master_found, args->id, reinterpret_cast<LPARAM> (&ep));
+			SendMessage (args.hwnd, qm_master_found, args.id, reinterpret_cast<LPARAM> (&ep));
 	}
 
-	SendMessage (args->hwnd, qm_master_complete, args->id, 0);
+	SendMessage (args.hwnd, qm_master_complete, args.id, 0);
 	return 0;
 }
 
