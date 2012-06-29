@@ -72,8 +72,8 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPWSTR /*
 				DispatchMessage (&msg);
 			}
 		} else if (r >= WAIT_OBJECT_0 && r < WAIT_OBJECT_0 + handles.size ()) {
-			int n = r - WAIT_OBJECT_0;
-			if (handles[n] == wd.mpt.get ()) {
+			HANDLE h = handles[r - WAIT_OBJECT_0];
+			if (h == wd.mpt.get ()) {
 				if (wd.master_refreshing) {
 					std::wostringstream ss;
 					ss << L"Unexpected exit (";
