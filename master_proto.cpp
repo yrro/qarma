@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -35,12 +36,17 @@ __stdcall unsigned int master_proto (void* _args) {
 
 	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 	{
+		std::default_random_engine reng (std::chrono::system_clock::now ().time_since_epoch ().count ());
+		std::uniform_int_distribution<> rdist (0, 19);
+		std::ostringstream host;
+		host << "arma2oapc.ms" << rdist (reng) << ".gamespy.com";
+
 		addrinfo hints = addrinfo ();
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
 		addrinfo* tmp;
-		int r = getaddrinfo ("arma2oapc.ms1.gamespy.com", "28910", &hints, &tmp); // TODO load balance
+		int r = getaddrinfo (host.str ().c_str (), "28910", &hints, &tmp); // TODO load balance
 		if (r) {
 			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
