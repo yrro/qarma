@@ -31,7 +31,7 @@ const UINT qm_master_complete = RegisterWindowMessage (L"a1837bb5-2756-4bbb-b15d
 __stdcall unsigned int master_proto (void* _args) {
 	master_proto_args args = *reinterpret_cast<master_proto_args*> (_args);
 
-	SendMessage (args.hwnd, qm_master_begin, args.id, 0);
+	PostMessage (args.hwnd, qm_master_begin, args.id, 0);
 
 	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> lookup (nullptr, freeaddrinfo);
 	{
@@ -91,7 +91,7 @@ __stdcall unsigned int master_proto (void* _args) {
 			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
 		} else if (r != static_cast<int> (buf.size ())) {
-			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short send"));
+			PostMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short send"));
 			return 0;
 		}
 	}
@@ -109,11 +109,11 @@ __stdcall unsigned int master_proto (void* _args) {
 			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (wstrerror (WSAGetLastError ()).c_str ()));
 			return 0;
 		} else if (r == 0) {
-			SendMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short recv"));
+			PostMessage (args.hwnd, qm_master_error, args.id, reinterpret_cast<LPARAM> (L"short recv"));
 			return 0;
 		}
 		std::copy (buf.begin (), buf.begin () + r, std::back_inserter (data));
-		SendMessage (args.hwnd, qm_master_progress, args.id, data.size ());
+		PostMessage (args.hwnd, qm_master_progress, args.id, data.size ());
 
 		int len = data.size ();
 		unsigned char* endp = enctypex_decoder (reinterpret_cast<unsigned char*> (const_cast<char*> ("Xn221z")), &master_validate[0], &data[0], &len, &enctypex_data);
@@ -133,7 +133,7 @@ __stdcall unsigned int master_proto (void* _args) {
 			SendMessage (args.hwnd, qm_master_found, args.id, reinterpret_cast<LPARAM> (&ep));
 	}
 
-	SendMessage (args.hwnd, qm_master_complete, args.id, 0);
+	PostMessage (args.hwnd, qm_master_complete, args.id, 0);
 	return 0;
 }
 
