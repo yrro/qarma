@@ -40,8 +40,8 @@ querymanager::querymanager (): hwnd (nullptr, DestroyWindow), protos (10) {
 		HWND_MESSAGE, nullptr, HINST_THISCOMPONENT, this));
 	assert (hwnd); // XXX proper error handling
 
-	/*UINT_PTR r = SetTimer (hwnd.get (), timer_id, 1000, nullptr);
-	assert (r); // proper error handling*/
+	UINT_PTR r = SetTimer (hwnd.get (), timer_id, 1000, nullptr);
+	assert (r); // proper error handling
 }
 
 void querymanager::queue_query (query_proto& proto, std::map<server_endpoint, server_info>::value_type& server) {

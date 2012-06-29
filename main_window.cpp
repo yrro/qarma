@@ -110,6 +110,7 @@ namespace {
 
 			std::wostringstream ss;
 			ss << ndone << L" of " << nqueued << L" servers queried";
+			SetWindowText (s, ss.str ().c_str ());
 		};
 		static int c = 0;
 		wd->qm.on_found = [&c] (const server_info& /*info*/) {
